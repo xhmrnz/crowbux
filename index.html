@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+<html lang="id">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#070b18" />
+    <meta
+      name="description"
+      content="Prototype sederhana website top up Robux dengan alur pemesanan yang cepat, aman, dan responsif."
+    />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Unbounded:wght@500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="icon" href="favicon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="styles.css" />
+    <title>Ruxly — Top Up Robux Cepat</title>
+  </head>
+  <body>
+    <div class="page-noise" aria-hidden="true"></div>
+
+    <header class="site-header">
+      <a class="brand" href="#top" aria-label="Ruxly home">
+        <span class="brand-mark" aria-hidden="true">
+          <span>R</span>
+        </span>
+        <span>Ruxly</span>
+        <small>Beta</small>
+      </a>
+
+      <nav class="site-nav" aria-label="Navigasi utama">
+        <a href="#topup">Top Up</a>
+        <a href="#how-it-works">Cara Kerja</a>
+        <a href="#faq">FAQ</a>
+      </nav>
+
+      <button class="header-action" type="button" data-scroll-to="topup">
+        Mulai top up
+        <span aria-hidden="true">↗</span>
+      </button>
+    </header>
+
+    <main id="top">
+      <section class="hero section-shell" aria-labelledby="hero-title">
+        <div class="hero-copy">
+          <div class="eyebrow">
+            <span class="pulse-dot" aria-hidden="true"></span>
+            Top up tanpa password
+          </div>
+          <h1 id="hero-title">
+            Robux masuk.
+            <span>Game lanjut.</span>
+          </h1>
+          <p>
+            Pilih nominal, bayar dengan metode favoritmu, dan pantau pesanan dari satu tempat.
+            Cepat, transparan, tanpa perlu membagikan kata sandi akun.
+          </p>
+          <div class="hero-actions">
+            <button class="primary-button" type="button" data-scroll-to="topup">
+              Top up sekarang
+              <span aria-hidden="true">→</span>
+            </button>
+            <a class="text-link" href="#how-it-works">Lihat cara kerjanya</a>
+          </div>
+          <ul class="trust-list" aria-label="Keunggulan layanan">
+            <li><span aria-hidden="true">✓</span> Tanpa login akun</li>
+            <li><span aria-hidden="true">✓</span> Pembayaran lokal</li>
+            <li><span aria-hidden="true">✓</span> Status transparan</li>
+          </ul>
+        </div>
+
+        <div class="hero-visual" aria-label="Ilustrasi paket Robux">
+          <div class="orb orb-one" aria-hidden="true"></div>
+          <div class="orb orb-two" aria-hidden="true"></div>
+          <div class="visual-card">
+            <div class="visual-topline">
+              <span>Saldo game</span>
+              <span class="live-label"><i></i> Live</span>
+            </div>
+            <div class="coin-stage" aria-hidden="true">
+              <div class="coin coin-back"><span>R</span></div>
+              <div class="coin coin-front"><span>R</span></div>
+              <div class="coin coin-small"><span>R</span></div>
+            </div>
+            <div class="balance-row">
+              <div>
+                <span>Paket terpopuler</span>
+                <strong>800 Robux</strong>
+              </div>
+              <div class="trend-badge">+10% bonus</div>
+            </div>
+          </div>
+          <div class="floating-order">
+            <span class="order-icon" aria-hidden="true">✓</span>
+            <div>
+              <strong>Pesanan selesai</strong>
+              <span>400 Robux · 12 detik lalu</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="ticker" aria-label="Informasi layanan">
+        <div class="ticker-track">
+          <span>Proses cepat</span><i></i>
+          <span>Tanpa password</span><i></i>
+          <span>QRIS & e-wallet</span><i></i>
+          <span>Dukungan lokal</span><i></i>
+          <span>Proses cepat</span><i></i>
+          <span>Tanpa password</span><i></i>
+          <span>QRIS & e-wallet</span><i></i>
+          <span>Dukungan lokal</span><i></i>
+        </div>
+      </section>
+
+      <section class="topup-section section-shell" id="topup" aria-labelledby="topup-title">
+        <div class="section-heading">
+          <div>
+            <span class="section-kicker">Checkout sederhana</span>
+            <h2 id="topup-title">Isi detail pesananmu.</h2>
+          </div>
+          <p>Empat langkah singkat. Pastikan username dan kontak sudah benar sebelum melanjutkan.</p>
+        </div>
+
+        <form class="checkout-layout" id="topup-form" novalidate>
+          <div class="form-stack">
+            <section class="form-card" aria-labelledby="account-title">
+              <div class="step-heading">
+                <span class="step-number">01</span>
+                <div>
+                  <h3 id="account-title">Akun Roblox</h3>
+                  <p>Kami hanya membutuhkan username, bukan password.</p>
+                </div>
+              </div>
+              <div class="account-field">
+                <label for="roblox-username">Username Roblox</label>
+                <div class="input-action-row">
+                  <input
+                    id="roblox-username"
+                    name="username"
+                    type="text"
+                    autocomplete="off"
+                    minlength="3"
+                    maxlength="20"
+                    placeholder="Contoh: HamPlays"
+                    required
+                  />
+                  <button class="secondary-button" id="check-username" type="button">Cek akun</button>
+                </div>
+                <p class="field-message" id="username-message" aria-live="polite">
+                  Gunakan username, bukan display name.
+                </p>
+              </div>
+            </section>
+
+            <section class="form-card" aria-labelledby="package-title">
+              <div class="step-heading">
+                <span class="step-number">02</span>
+                <div>
+                  <h3 id="package-title">Pilih nominal</h3>
+                  <p>Harga sudah termasuk estimasi biaya layanan.</p>
+                </div>
+              </div>
+              <div class="package-grid" id="package-grid">
+                <label class="package-option">
+                  <input type="radio" name="package" value="80" data-price="15000" />
+                  <span class="package-content">
+                    <span class="package-amount"><i aria-hidden="true">R</i> 80</span>
+                    <span class="package-price">Rp15.000</span>
+                  </span>
+                </label>
+                <label class="package-option">
+                  <input type="radio" name="package" value="400" data-price="65000" />
+                  <span class="package-content">
+                    <span class="package-amount"><i aria-hidden="true">R</i> 400</span>
+                    <span class="package-price">Rp65.000</span>
+                  </span>
+                </label>
+                <label class="package-option package-popular">
+                  <input type="radio" name="package" value="800" data-price="120000" checked />
+                  <span class="popular-badge">Terpopuler</span>
+                  <span class="package-content">
+                    <span class="package-amount"><i aria-hidden="true">R</i> 800</span>
+                    <span class="package-price">Rp120.000</span>
+                  </span>
+                </label>
+                <label class="package-option">
+                  <input type="radio" name="package" value="1700" data-price="240000" />
+                  <span class="package-content">
+                    <span class="package-amount"><i aria-hidden="true">R</i> 1.700</span>
+                    <span class="package-price">Rp240.000</span>
+                  </span>
+                </label>
+                <label class="package-option">
+                  <input type="radio" name="package" value="4500" data-price="590000" />
+                  <span class="package-content">
+                    <span class="package-amount"><i aria-hidden="true">R</i> 4.500</span>
+                    <span class="package-price">Rp590.000</span>
+                  </span>
+                </label>
+                <label class="package-option">
+                  <input type="radio" name="package" value="10000" data-price="1250000" />
+                  <span class="package-content">
+                    <span class="package-amount"><i aria-hidden="true">R</i> 10.000</span>
+                    <span class="package-price">Rp1.250.000</span>
+                  </span>
+                </label>
+              </div>
+            </section>
+
+            <section class="form-card" aria-labelledby="payment-title">
+              <div class="step-heading">
+                <span class="step-number">03</span>
+                <div>
+                  <h3 id="payment-title">Metode pembayaran</h3>
+                  <p>Pilih kanal pembayaran yang paling nyaman.</p>
+                </div>
+              </div>
+              <div class="payment-grid">
+                <label class="payment-option">
+                  <input type="radio" name="payment" value="QRIS" data-fee="0" checked />
+                  <span class="payment-content">
+                    <span class="payment-logo qris-logo">QR</span>
+                    <span><strong>QRIS</strong><small>Tanpa biaya admin</small></span>
+                    <i aria-hidden="true"></i>
+                  </span>
+                </label>
+                <label class="payment-option">
+                  <input type="radio" name="payment" value="DANA" data-fee="1500" />
+                  <span class="payment-content">
+                    <span class="payment-logo dana-logo">D</span>
+                    <span><strong>DANA</strong><small>Admin Rp1.500</small></span>
+                    <i aria-hidden="true"></i>
+                  </span>
+                </label>
+                <label class="payment-option">
+                  <input type="radio" name="payment" value="GoPay" data-fee="2000" />
+                  <span class="payment-content">
+                    <span class="payment-logo gopay-logo">G</span>
+                    <span><strong>GoPay</strong><small>Admin Rp2.000</small></span>
+                    <i aria-hidden="true"></i>
+                  </span>
+                </label>
+                <label class="payment-option">
+                  <input type="radio" name="payment" value="Bank Transfer" data-fee="3000" />
+                  <span class="payment-content">
+                    <span class="payment-logo bank-logo">VA</span>
+                    <span><strong>Virtual Account</strong><small>Admin Rp3.000</small></span>
+                    <i aria-hidden="true"></i>
+                  </span>
+                </label>
+              </div>
+            </section>
+
+            <section class="form-card" aria-labelledby="contact-title">
+              <div class="step-heading">
+                <span class="step-number">04</span>
+                <div>
+                  <h3 id="contact-title">Kontak penerima</h3>
+                  <p>Status pesanan demo akan dikirim ke kontak ini.</p>
+                </div>
+              </div>
+              <div class="contact-grid">
+                <label>
+                  Nomor WhatsApp
+                  <input
+                    id="phone"
+                    name="phone"
+                    type="tel"
+                    inputmode="numeric"
+                    autocomplete="tel"
+                    placeholder="08xxxxxxxxxx"
+                    required
+                  />
+                </label>
+                <label>
+                  Email <span>(opsional)</span>
+                  <input
+                    id="email"
+                    name="email"
+                    type="email"
+                    autocomplete="email"
+                    placeholder="kamu@email.com"
+                  />
+                </label>
+              </div>
+            </section>
+          </div>
+
+          <aside class="order-summary" aria-labelledby="summary-title">
+            <div class="summary-head">
+              <span class="section-kicker">Ringkasan</span>
+              <h3 id="summary-title">Pesananmu</h3>
+            </div>
+            <div class="summary-product">
+              <div class="summary-coin" aria-hidden="true">R</div>
+              <div>
+                <span id="summary-package">800 Robux</span>
+                <small>Top up via username</small>
+              </div>
+            </div>
+            <dl class="summary-details">
+              <div>
+                <dt>Username</dt>
+                <dd id="summary-username">Belum diisi</dd>
+              </div>
+              <div>
+                <dt>Pembayaran</dt>
+                <dd id="summary-payment">QRIS</dd>
+              </div>
+              <div>
+                <dt>Harga paket</dt>
+                <dd id="summary-subtotal">Rp120.000</dd>
+              </div>
+              <div>
+                <dt>Biaya admin</dt>
+                <dd id="summary-fee">Rp0</dd>
+              </div>
+            </dl>
+            <div class="summary-total">
+              <span>Total pembayaran</span>
+              <strong id="summary-total">Rp120.000</strong>
+            </div>
+            <button class="primary-button checkout-button" type="submit">
+              Lanjutkan pembayaran
+              <span aria-hidden="true">→</span>
+            </button>
+            <p class="secure-note">
+              <span aria-hidden="true">⌁</span>
+              Ini masih prototype. Tidak ada pembayaran yang diproses.
+            </p>
+          </aside>
+        </form>
+      </section>
+
+      <section class="steps-section section-shell" id="how-it-works" aria-labelledby="steps-title">
+        <div class="section-heading compact-heading">
+          <div>
+            <span class="section-kicker">Cara kerja</span>
+            <h2 id="steps-title">Tiga langkah. Beres.</h2>
+          </div>
+        </div>
+        <div class="steps-grid">
+          <article>
+            <span>01</span>
+            <div class="step-symbol" aria-hidden="true">@</div>
+            <h3>Masukkan username</h3>
+            <p>Cukup gunakan username Roblox. Jangan pernah masukkan password atau kode OTP.</p>
+          </article>
+          <article>
+            <span>02</span>
+            <div class="step-symbol" aria-hidden="true">R</div>
+            <h3>Pilih paket</h3>
+            <p>Tentukan nominal Robux dan metode pembayaran lokal yang paling sesuai.</p>
+          </article>
+          <article>
+            <span>03</span>
+            <div class="step-symbol" aria-hidden="true">✓</div>
+            <h3>Pantau pesanan</h3>
+            <p>Setelah pembayaran terverifikasi, status pesanan diperbarui melalui WhatsApp.</p>
+          </article>
+        </div>
+      </section>
+
+      <section class="faq-section section-shell" id="faq" aria-labelledby="faq-title">
+        <div class="faq-intro">
+          <span class="section-kicker">Pertanyaan umum</span>
+          <h2 id="faq-title">Yang perlu kamu tahu.</h2>
+          <p>Masih punya pertanyaan? Hubungi dukungan setelah versi transaksi resmi tersedia.</p>
+        </div>
+        <div class="faq-list">
+          <article class="faq-item">
+            <button type="button" aria-expanded="true">
+              Apakah perlu memberikan password Roblox?
+              <span aria-hidden="true">−</span>
+            </button>
+            <div class="faq-answer">
+              <p>Tidak. Prototype ini dirancang hanya menggunakan username. Jangan pernah membagikan password, OTP, atau backup code kepada siapa pun.</p>
+            </div>
+          </article>
+          <article class="faq-item">
+            <button type="button" aria-expanded="false">
+              Berapa lama Robux akan masuk?
+              <span aria-hidden="true">+</span>
+            </button>
+            <div class="faq-answer" hidden>
+              <p>Belum ada estimasi nyata karena halaman ini masih berupa prototype frontend dan belum terhubung ke penyedia produk atau payment gateway.</p>
+            </div>
+          </article>
+          <article class="faq-item">
+            <button type="button" aria-expanded="false">
+              Apakah pembayaran di halaman ini aktif?
+              <span aria-hidden="true">+</span>
+            </button>
+            <div class="faq-answer" hidden>
+              <p>Belum. Tombol checkout hanya mendemonstrasikan alur antarmuka dan membuat nomor pesanan demo tanpa menagih pengguna.</p>
+            </div>
+          </article>
+          <article class="faq-item">
+            <button type="button" aria-expanded="false">
+              Apakah Ruxly terafiliasi dengan Roblox?
+              <span aria-hidden="true">+</span>
+            </button>
+            <div class="faq-answer" hidden>
+              <p>Tidak. Ini adalah konsep independen. Roblox dan Robux merupakan merek dagang milik Roblox Corporation.</p>
+            </div>
+          </article>
+        </div>
+      </section>
+    </main>
+
+    <footer class="site-footer section-shell">
+      <a class="brand footer-brand" href="#top">
+        <span class="brand-mark" aria-hidden="true"><span>R</span></span>
+        <span>Ruxly</span>
+      </a>
+      <p>Prototype top-up sederhana · Tidak memproses transaksi nyata.</p>
+      <span id="footer-year"></span>
+    </footer>
+
+    <div class="modal-backdrop" id="success-modal" hidden>
+      <section class="success-modal" role="dialog" aria-modal="true" aria-labelledby="success-title">
+        <button class="modal-close" type="button" aria-label="Tutup modal">×</button>
+        <div class="success-icon" aria-hidden="true">✓</div>
+        <span class="section-kicker">Pesanan demo dibuat</span>
+        <h2 id="success-title">Alurnya berjalan.</h2>
+        <p>
+          Ini adalah simulasi frontend. Tidak ada saldo yang dipotong dan tidak ada Robux yang dikirim.
+        </p>
+        <div class="demo-order">
+          <span>Nomor pesanan</span>
+          <strong id="demo-order-id">RUX-DEMO</strong>
+        </div>
+        <button class="primary-button modal-done" type="button">Kembali ke halaman</button>
+      </section>
+    </div>
+
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+    <script src="app.js"></script>
+  </body>
+</html>
