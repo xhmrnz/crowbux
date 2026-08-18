@@ -103,7 +103,7 @@
 
   function openModal() {
     var suffix = Math.random().toString(36).slice(2, 7).toUpperCase();
-    document.getElementById("demo-order-id").textContent = "RUX-" + suffix;
+    document.getElementById("demo-order-id").textContent = "CBX-" + suffix;
     modal.hidden = false;
     document.body.style.overflow = "hidden";
     modal.querySelector(".modal-close").focus();

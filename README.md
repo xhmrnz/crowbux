@@ -1,6 +1,6 @@
-# Ruxly — Robux Top-up Prototype
+# Crowbux — Robux for the Flock
 
-Prototype frontend statis untuk alur top-up Robux sederhana. Halaman ini belum terhubung ke Roblox API, penyedia produk, database, maupun payment gateway.
+Crowbux menggabungkan nama komunitas **Crow** dan mata uang Roblox, **Robux**. Proyek ini merupakan prototype frontend statis untuk alur top-up Robux sederhana dan belum terhubung ke Roblox API, penyedia produk, database, maupun payment gateway.
 
 ## Fitur
 
