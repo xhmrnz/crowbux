@@ -1,14 +1,22 @@
-(function initTopupPrototype() {
+(function initCrowbux() {
+  var apiBaseUrl = document.documentElement.dataset.apiBase || "";
   var form = document.getElementById("topup-form");
   var usernameInput = document.getElementById("roblox-username");
   var usernameButton = document.getElementById("check-username");
   var usernameMessage = document.getElementById("username-message");
   var phoneInput = document.getElementById("phone");
   var emailInput = document.getElementById("email");
+  var checkoutButton = form.querySelector(".checkout-button");
   var modal = document.getElementById("success-modal");
   var toast = document.getElementById("toast");
+  var stockDisplays = document.querySelectorAll("[data-stock-display]");
+  var pricePerThousandDisplay = document.getElementById("price-per-thousand");
   var toastTimer;
+  var orderPollTimer;
+  var activeOrderCode = "";
   var usernameVerified = false;
+  var availableStock = 0;
+  var catalogReady = false;
 
   var summary = {
     package: document.getElementById("summary-package"),
@@ -19,12 +27,20 @@
     total: document.getElementById("summary-total")
   };
 
+  function apiUrl(path) {
+    return apiBaseUrl.replace(/\/$/, "") + path;
+  }
+
   function formatCurrency(value) {
     return new Intl.NumberFormat("id-ID", {
       style: "currency",
       currency: "IDR",
       maximumFractionDigits: 0
     }).format(value);
+  }
+
+  function formatNumber(value) {
+    return Number(value).toLocaleString("id-ID");
   }
 
   function selectedInput(name) {
@@ -34,11 +50,13 @@
   function updateSummary() {
     var selectedPackage = selectedInput("package");
     var selectedPayment = selectedInput("payment");
+    if (!selectedPackage || !selectedPayment) return;
+
     var subtotal = Number(selectedPackage.dataset.price);
     var fee = Number(selectedPayment.dataset.fee);
     var username = usernameInput.value.trim();
 
-    summary.package.textContent = Number(selectedPackage.value).toLocaleString("id-ID") + " Robux";
+    summary.package.textContent = formatNumber(selectedPackage.value) + " Robux";
     summary.username.textContent = username || "Belum diisi";
     summary.payment.textContent = selectedPayment.value;
     summary.subtotal.textContent = formatCurrency(subtotal);
@@ -62,7 +80,62 @@
     toast.classList.add("is-visible");
     toastTimer = window.setTimeout(function() {
       toast.classList.remove("is-visible");
-    }, 3200);
+    }, 3600);
+  }
+
+  function setCheckoutLoading(isLoading) {
+    checkoutButton.disabled = isLoading || !catalogReady;
+    checkoutButton.querySelector("span").textContent = isLoading ? "…" : "→";
+    checkoutButton.firstChild.textContent = isLoading ? "Membuat pesanan " : "Lanjutkan pembayaran ";
+  }
+
+  async function request(path, options) {
+    var response = await fetch(apiUrl(path), options || {});
+    var body = await response.json().catch(function() { return {}; });
+    if (!response.ok) throw new Error(body.error || "Permintaan gagal diproses.");
+    return body;
+  }
+
+  async function loadCatalog() {
+    stockDisplays.forEach(function(element) {
+      element.textContent = "Memuat…";
+    });
+
+    try {
+      var catalog = await request("/api/catalog");
+      availableStock = Number(catalog.availableRobux);
+      catalogReady = true;
+      stockDisplays.forEach(function(element) {
+        element.textContent = formatNumber(availableStock) + " Robux";
+      });
+      pricePerThousandDisplay.textContent = formatCurrency(catalog.pricePer1000) + " / 1.000 Robux";
+
+      catalog.packages.forEach(function(packageItem) {
+        var input = form.querySelector('input[name="package"][value="' + packageItem.robuxAmount + '"]');
+        if (!input) return;
+        var option = input.closest(".package-option");
+        input.dataset.price = String(packageItem.price);
+        input.disabled = Number(packageItem.robuxAmount) > availableStock;
+        option.classList.toggle("is-unavailable", input.disabled);
+        option.querySelector(".package-price").textContent = formatCurrency(packageItem.price);
+      });
+
+      var selectedPackage = selectedInput("package");
+      if (!selectedPackage || selectedPackage.disabled) {
+        var firstAvailable = form.querySelector('input[name="package"]:not(:disabled)');
+        if (firstAvailable) firstAvailable.checked = true;
+      }
+      setCheckoutLoading(false);
+      updateSummary();
+    } catch (error) {
+      catalogReady = false;
+      stockDisplays.forEach(function(element) {
+        element.textContent = "Tidak tersedia";
+      });
+      pricePerThousandDisplay.textContent = "Katalog sedang tidak tersedia";
+      setCheckoutLoading(false);
+      showToast(error.message);
+    }
   }
 
   function checkUsername() {
@@ -97,21 +170,72 @@
 
     phoneInput.classList.toggle("is-invalid", !phoneValid);
     emailInput.classList.toggle("is-invalid", !emailValid);
-
     return phoneValid && emailValid;
   }
 
-  function openModal() {
-    var suffix = Math.random().toString(36).slice(2, 7).toUpperCase();
-    document.getElementById("demo-order-id").textContent = "CBX-" + suffix;
+  function setOrderStatus(status) {
+    var statusElement = document.getElementById("order-status");
+    var isPaid = status === "PAID";
+    statusElement.classList.toggle("is-paid", isPaid);
+    statusElement.querySelector("strong").textContent = isPaid ? "Pembayaran terverifikasi" : "Menunggu pembayaran";
+    statusElement.querySelector("span").textContent = isPaid
+      ? "Stok telah dikurangi dan pesanan siap diproses."
+      : "Stok baru berkurang setelah pembayaran diverifikasi.";
+  }
+
+  function openModal(order) {
+    activeOrderCode = order.orderCode;
+    document.getElementById("demo-order-id").textContent = order.orderCode;
+    document.getElementById("order-queue").textContent = "#" + String(order.queueNumber).padStart(3, "0");
+    document.getElementById("order-date").textContent = order.orderDate;
+    setOrderStatus(order.status);
     modal.hidden = false;
     document.body.style.overflow = "hidden";
     modal.querySelector(".modal-close").focus();
+    startOrderPolling();
   }
 
   function closeModal() {
     modal.hidden = true;
     document.body.style.overflow = "";
+    window.clearInterval(orderPollTimer);
+  }
+
+  function startOrderPolling() {
+    window.clearInterval(orderPollTimer);
+    orderPollTimer = window.setInterval(async function() {
+      if (!activeOrderCode) return;
+      try {
+        var response = await request("/api/orders/" + activeOrderCode);
+        setOrderStatus(response.order.status);
+        if (response.order.status === "PAID") {
+          window.clearInterval(orderPollTimer);
+          await loadCatalog();
+        }
+      } catch (error) {
+        console.warn(error);
+      }
+    }, 5000);
+  }
+
+  async function createOrder() {
+    var selectedPackage = selectedInput("package");
+    var selectedPayment = selectedInput("payment");
+    if (!selectedPackage || selectedPackage.disabled) {
+      throw new Error("Pilih paket yang masih tersedia.");
+    }
+
+    return request("/api/orders", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        username: usernameInput.value.trim(),
+        robuxAmount: Number(selectedPackage.value),
+        paymentMethod: selectedPayment.value,
+        phone: phoneInput.value,
+        email: emailInput.value.trim()
+      })
+    });
   }
 
   document.querySelectorAll("[data-scroll-to]").forEach(function(button) {
@@ -141,21 +265,23 @@
     emailInput.classList.remove("is-invalid");
   });
 
-  form.addEventListener("submit", function(event) {
+  form.addEventListener("submit", async function(event) {
     event.preventDefault();
 
+    if (!catalogReady) {
+      showToast("Katalog dan stok belum dapat dimuat.");
+      return;
+    }
     if (!validUsername(usernameInput.value.trim())) {
       checkUsername();
       showToast("Periksa username Roblox terlebih dahulu.");
       return;
     }
-
     if (!usernameVerified) {
       showToast("Klik “Cek akun” sebelum melanjutkan.");
       usernameButton.focus();
       return;
     }
-
     if (!validateContact()) {
       showToast("Periksa kembali nomor WhatsApp atau email.");
       if (phoneInput.classList.contains("is-invalid")) phoneInput.focus();
@@ -163,7 +289,16 @@
       return;
     }
 
-    openModal();
+    setCheckoutLoading(true);
+    try {
+      var response = await createOrder();
+      openModal(response.order);
+    } catch (error) {
+      showToast(error.message);
+      await loadCatalog();
+    } finally {
+      setCheckoutLoading(false);
+    }
   });
 
   document.querySelectorAll(".faq-item button").forEach(function(button) {
@@ -188,4 +323,5 @@
 
   document.getElementById("footer-year").textContent = "© " + new Date().getFullYear();
   updateSummary();
+  loadCatalog();
 })();

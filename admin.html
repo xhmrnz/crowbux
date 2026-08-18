@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="id" data-api-base="https://crowbux-api.crowbux-stock.workers.dev">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#070b18" />
+    <meta name="robots" content="noindex, nofollow" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Unbounded:wght@500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="icon" href="favicon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="styles.css" />
+    <title>Crowbux Admin — Stok &amp; Harga</title>
+  </head>
+  <body class="admin-page">
+    <div class="page-noise" aria-hidden="true"></div>
+
+    <header class="site-header">
+      <a class="brand" href="index.html" aria-label="Kembali ke Crowbux">
+        <span class="brand-mark" aria-hidden="true"><span>C</span></span>
+        <span>Crowbux</span>
+        <small>Admin</small>
+      </a>
+      <a class="header-action" href="index.html">Lihat toko <span aria-hidden="true">↗</span></a>
+    </header>
+
+    <main class="admin-shell">
+      <section class="admin-intro">
+        <span class="section-kicker">Control room</span>
+        <h1>Stok dan harga,<br /><span>dalam satu panel.</span></h1>
+        <p>Kelola stok global dan harga dasar. Harga setiap paket dihitung proporsional dari harga per 1.000 Robux.</p>
+      </section>
+
+      <section class="admin-auth form-card" id="admin-auth" aria-labelledby="auth-title">
+        <div class="step-heading">
+          <span class="step-number">01</span>
+          <div>
+            <h2 id="auth-title">Akses admin</h2>
+            <p>Masukkan secret admin Cloudflare. Secret hanya disimpan selama tab ini terbuka.</p>
+          </div>
+        </div>
+        <form id="admin-login-form" class="admin-login-form">
+          <label for="admin-secret">Admin secret</label>
+          <div class="input-action-row">
+            <input id="admin-secret" type="password" autocomplete="current-password" required />
+            <button class="primary-button" type="submit">Buka dashboard</button>
+          </div>
+        </form>
+      </section>
+
+      <section class="admin-dashboard" id="admin-dashboard" hidden>
+        <div class="admin-toolbar">
+          <div>
+            <span class="section-kicker">Live inventory</span>
+            <h2>Pengaturan Crowbux</h2>
+          </div>
+          <button class="secondary-button" id="admin-logout" type="button">Keluar</button>
+        </div>
+
+        <div class="admin-metrics">
+          <article>
+            <span>Stok tersedia</span>
+            <strong id="admin-current-stock">—</strong>
+            <small>Robux siap dijual</small>
+          </article>
+          <article>
+            <span>Harga dasar</span>
+            <strong id="admin-current-price">—</strong>
+            <small>Per 1.000 Robux</small>
+          </article>
+          <article>
+            <span>Terakhir diperbarui</span>
+            <strong id="admin-updated-at">—</strong>
+            <small>Waktu database</small>
+          </article>
+        </div>
+
+        <div class="admin-grid">
+          <form class="form-card admin-settings-form" id="admin-settings-form">
+            <div class="step-heading">
+              <span class="step-number">02</span>
+              <div>
+                <h3>Update inventory</h3>
+                <p>Tambah restock atau tetapkan ulang jumlah stok.</p>
+              </div>
+            </div>
+
+            <div class="admin-field-grid">
+              <label>
+                Operasi stok
+                <select id="stock-operation" name="stockOperation">
+                  <option value="add">Tambah ke stok saat ini</option>
+                  <option value="set">Tetapkan jumlah stok</option>
+                </select>
+              </label>
+              <label>
+                Jumlah Robux
+                <input id="stock-amount" name="stockAmount" type="number" min="0" step="1" value="0" required />
+              </label>
+              <div class="admin-price-field">
+                <label for="price-per-1000">Harga per 1.000 Robux</label>
+                <div class="currency-input">
+                  <span>Rp</span>
+                  <input id="price-per-1000" name="pricePer1000" type="number" min="1000" step="100" required />
+                </div>
+              </div>
+            </div>
+
+            <div class="admin-save-row">
+              <p>Perubahan harga langsung memperbarui seluruh paket di halaman pembeli.</p>
+              <button class="primary-button" type="submit">Simpan perubahan <span aria-hidden="true">→</span></button>
+            </div>
+          </form>
+
+          <aside class="form-card price-preview" aria-labelledby="preview-title">
+            <div class="step-heading">
+              <span class="step-number">03</span>
+              <div>
+                <h3 id="preview-title">Preview harga paket</h3>
+                <p>Dihitung otomatis dari harga dasar.</p>
+              </div>
+            </div>
+            <div class="preview-list" id="price-preview"></div>
+          </aside>
+        </div>
+
+        <section class="form-card admin-orders" aria-labelledby="admin-orders-title">
+          <div class="admin-orders-heading">
+            <div class="step-heading">
+              <span class="step-number">04</span>
+              <div>
+                <h3 id="admin-orders-title">Pesanan terbaru</h3>
+                <p>Konfirmasi pembayaran manual untuk mengurangi stok dan memulai proses top up.</p>
+              </div>
+            </div>
+            <button class="secondary-button" id="refresh-orders" type="button">Muat ulang</button>
+          </div>
+          <div class="admin-order-list" id="admin-order-list">
+            <p class="empty-orders">Memuat pesanan…</p>
+          </div>
+        </section>
+      </section>
+    </main>
+
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+    <script src="admin.js"></script>
+  </body>
+</html>

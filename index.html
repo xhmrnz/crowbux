@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="id">
+<html lang="id" data-api-base="https://crowbux-api.crowbux-stock.workers.dev">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -71,9 +71,13 @@
             <li><span aria-hidden="true">✓</span> Pembayaran lokal</li>
             <li><span aria-hidden="true">✓</span> Status transparan</li>
           </ul>
+          <div class="hero-stock" aria-live="polite">
+            <span><i aria-hidden="true"></i> Stok Robux tersedia</span>
+            <strong data-stock-display>Memuat…</strong>
+          </div>
         </div>
 
-        <div class="hero-visual" aria-label="Ilustrasi paket Robux">
+        <div class="hero-visual" role="img" aria-label="Ilustrasi paket Robux">
           <div class="orb orb-one" aria-hidden="true"></div>
           <div class="orb orb-two" aria-hidden="true"></div>
           <div class="visual-card">
@@ -109,11 +113,11 @@
         <div class="ticker-track">
           <span>Proses cepat</span><i></i>
           <span>Tanpa password</span><i></i>
-          <span>QRIS & e-wallet</span><i></i>
+          <span>QRIS &amp; e-wallet</span><i></i>
           <span>Transaksi transparan</span><i></i>
           <span>Proses cepat</span><i></i>
           <span>Tanpa password</span><i></i>
-          <span>QRIS & e-wallet</span><i></i>
+          <span>QRIS &amp; e-wallet</span><i></i>
           <span>Transaksi transparan</span><i></i>
         </div>
       </section>
@@ -165,49 +169,53 @@
                   <h3 id="package-title">Pilih nominal</h3>
                   <p>Harga sudah termasuk estimasi biaya layanan.</p>
                 </div>
+                <div class="catalog-meta">
+                  <span data-stock-display>Memuat…</span>
+                  <small id="price-per-thousand">Memuat harga…</small>
+                </div>
               </div>
               <div class="package-grid" id="package-grid">
                 <label class="package-option">
-                  <input type="radio" name="package" value="80" data-price="15000" />
+                  <input type="radio" name="package" value="80" data-price="12800" />
                   <span class="package-content">
                     <span class="package-amount"><i aria-hidden="true">R</i> 80</span>
-                    <span class="package-price">Rp15.000</span>
+                    <span class="package-price">Rp12.800</span>
                   </span>
                 </label>
                 <label class="package-option">
-                  <input type="radio" name="package" value="400" data-price="65000" />
+                  <input type="radio" name="package" value="400" data-price="64000" />
                   <span class="package-content">
                     <span class="package-amount"><i aria-hidden="true">R</i> 400</span>
-                    <span class="package-price">Rp65.000</span>
+                    <span class="package-price">Rp64.000</span>
                   </span>
                 </label>
                 <label class="package-option package-popular">
-                  <input type="radio" name="package" value="800" data-price="120000" checked />
+                  <input type="radio" name="package" value="800" data-price="128000" checked />
                   <span class="popular-badge">Terpopuler</span>
                   <span class="package-content">
                     <span class="package-amount"><i aria-hidden="true">R</i> 800</span>
-                    <span class="package-price">Rp120.000</span>
+                    <span class="package-price">Rp128.000</span>
                   </span>
                 </label>
                 <label class="package-option">
-                  <input type="radio" name="package" value="1700" data-price="240000" />
+                  <input type="radio" name="package" value="1700" data-price="272000" />
                   <span class="package-content">
                     <span class="package-amount"><i aria-hidden="true">R</i> 1.700</span>
-                    <span class="package-price">Rp240.000</span>
+                    <span class="package-price">Rp272.000</span>
                   </span>
                 </label>
                 <label class="package-option">
-                  <input type="radio" name="package" value="4500" data-price="590000" />
+                  <input type="radio" name="package" value="4500" data-price="720000" />
                   <span class="package-content">
                     <span class="package-amount"><i aria-hidden="true">R</i> 4.500</span>
-                    <span class="package-price">Rp590.000</span>
+                    <span class="package-price">Rp720.000</span>
                   </span>
                 </label>
                 <label class="package-option">
-                  <input type="radio" name="package" value="10000" data-price="1250000" />
+                  <input type="radio" name="package" value="10000" data-price="1600000" />
                   <span class="package-content">
                     <span class="package-amount"><i aria-hidden="true">R</i> 10.000</span>
-                    <span class="package-price">Rp1.250.000</span>
+                    <span class="package-price">Rp1.600.000</span>
                   </span>
                 </label>
               </div>
@@ -315,7 +323,7 @@
               </div>
               <div>
                 <dt>Harga paket</dt>
-                <dd id="summary-subtotal">Rp120.000</dd>
+                <dd id="summary-subtotal">Rp128.000</dd>
               </div>
               <div>
                 <dt>Biaya admin</dt>
@@ -324,7 +332,7 @@
             </dl>
             <div class="summary-total">
               <span>Total pembayaran</span>
-              <strong id="summary-total">Rp120.000</strong>
+              <strong id="summary-total">Rp128.000</strong>
             </div>
             <button class="primary-button checkout-button" type="submit">
               Lanjutkan pembayaran
@@ -332,7 +340,7 @@
             </button>
             <p class="secure-note">
               <span aria-hidden="true">⌁</span>
-              Ini masih prototype. Tidak ada pembayaran yang diproses.
+              Nomor antrean dibuat otomatis. Stok berkurang setelah pembayaran terverifikasi.
             </p>
           </aside>
         </form>
@@ -398,7 +406,7 @@
               <span aria-hidden="true">+</span>
             </button>
             <div class="faq-answer" hidden>
-              <p>Belum. Tombol checkout hanya mendemonstrasikan alur antarmuka dan membuat nomor pesanan demo tanpa menagih pengguna.</p>
+              <p>Checkout akan membuat pesanan dan nomor antrean. Integrasi payment gateway masih diperlukan agar verifikasi pembayaran berjalan otomatis.</p>
             </div>
           </article>
           <article class="faq-item">
@@ -419,7 +427,7 @@
         <span class="brand-mark" aria-hidden="true"><span>C</span></span>
         <span>Crowbux</span>
       </a>
-      <p>Prototype top-up sederhana · Tidak memproses transaksi nyata.</p>
+      <p>Top-up sederhana dengan stok dan antrean transparan.</p>
       <span id="footer-year"></span>
     </footer>
 
@@ -427,14 +435,27 @@
       <section class="success-modal" role="dialog" aria-modal="true" aria-labelledby="success-title">
         <button class="modal-close" type="button" aria-label="Tutup modal">×</button>
         <div class="success-icon" aria-hidden="true">✓</div>
-        <span class="section-kicker">Pesanan demo dibuat</span>
-        <h2 id="success-title">Siap terbang.</h2>
+        <span class="section-kicker">Pesanan berhasil dibuat</span>
+        <h2 id="success-title">Antreanmu tercatat.</h2>
         <p>
-          Ini adalah simulasi frontend. Tidak ada saldo yang dipotong dan tidak ada Robux yang dikirim.
+          Simpan nomor pesanan ini untuk memantau status pembayaran dan proses top up.
         </p>
-        <div class="demo-order">
-          <span>Nomor pesanan</span>
-          <strong id="demo-order-id">CBX-DEMO</strong>
+        <div class="order-identifiers">
+          <div class="demo-order">
+            <span>Nomor pesanan</span>
+            <strong id="demo-order-id">CBX-00000000-000</strong>
+          </div>
+          <div class="demo-order">
+            <span>Antrean tanggal <b id="order-date">—</b></span>
+            <strong id="order-queue">#000</strong>
+          </div>
+        </div>
+        <div class="order-status" id="order-status" role="status" aria-live="polite">
+          <i aria-hidden="true"></i>
+          <div>
+            <strong>Menunggu pembayaran</strong>
+            <span>Stok baru berkurang setelah pembayaran diverifikasi.</span>
+          </div>
         </div>
         <button class="primary-button modal-done" type="button">Kembali ke halaman</button>
       </section>

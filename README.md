@@ -1,25 +1,31 @@
-# Crowbux — Robux for the Flock
+# Crowbux
 
-Crowbux menggabungkan nama komunitas **Crow** dan mata uang Roblox, **Robux**. Proyek ini merupakan prototype frontend statis untuk alur top-up Robux sederhana dan belum terhubung ke Roblox API, penyedia produk, database, maupun payment gateway.
+Crowbux adalah storefront top-up Robux dengan katalog harga dinamis, stok global, dan nomor antrean harian.
 
-## Fitur
+## Halaman
 
-- Form username tanpa password
-- Pilihan paket Robux
-- Pilihan metode pembayaran dan biaya admin
-- Ringkasan harga dinamis
-- Validasi kontak sederhana
-- Simulasi checkout dan nomor pesanan demo
-- FAQ dan layout responsif
+- `index.html` — storefront pembeli.
+- `admin.html` — dashboard admin untuk restock dan harga per 1.000 Robux.
+- `worker/index.js` — Cloudflare Worker API.
+- `worker/schema.sql` — skema Cloudflare D1.
 
-## Menjalankan lokal
+## Alur data
 
-Buka `index.html` langsung di browser atau jalankan server statis:
+1. Storefront mengambil stok dan harga paket dari `GET /api/catalog`.
+2. Checkout membuat order `PENDING` dan nomor antrean berurutan per tanggal Jakarta.
+3. Payment gateway atau admin backend memanggil endpoint konfirmasi pembayaran menggunakan `PAYMENT_WEBHOOK_SECRET`.
+4. Trigger D1 mengubah order menjadi `PAID` dan mengurangi stok tepat satu kali.
+5. Admin mengakses `admin.html` menggunakan `ADMIN_API_SECRET`, lalu dapat mengelola stok, harga, dan mengonfirmasi pembayaran manual.
 
-```powershell
-npx serve .
+Harga paket dihitung proporsional dengan rumus `robux / 1000 × harga dasar`.
+
+## Cloudflare
+
+Konfigurasi Worker berada di `wrangler.jsonc`. Secrets yang diperlukan:
+
+```text
+ADMIN_API_SECRET
+PAYMENT_WEBHOOK_SECRET
 ```
 
-## Batasan
-
-Seluruh harga, status akun, transaksi, dan nomor pesanan hanya untuk demonstrasi UI. Roblox dan Robux merupakan merek dagang milik Roblox Corporation. Proyek ini tidak berafiliasi dengan Roblox Corporation.
+Endpoint konfirmasi pembayaran sengaja tidak tersedia dari browser pembeli. Hubungkan endpoint tersebut ke webhook payment gateway agar stok hanya berkurang setelah pembayaran benar-benar terverifikasi.
