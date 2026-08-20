@@ -19,7 +19,6 @@
   var modal = document.getElementById("success-modal");
   var toast = document.getElementById("toast");
   var stockDisplays = document.querySelectorAll("[data-stock-display]");
-  var pricePerThousandDisplay = document.getElementById("price-per-thousand");
   var toastTimer;
   var orderPollTimer;
   var activeOrderCode = "";
@@ -152,7 +151,6 @@
       stockDisplays.forEach(function(element) {
         element.textContent = formatNumber(availableStock) + " Robux";
       });
-      pricePerThousandDisplay.textContent = formatCurrency(catalog.pricePer1000) + " / 1.000 Robux";
 
       catalog.packages.forEach(function(packageItem) {
         var input = form.querySelector('input[name="package"][value="' + packageItem.robuxAmount + '"]');
@@ -176,7 +174,6 @@
       stockDisplays.forEach(function(element) {
         element.textContent = "Tidak tersedia";
       });
-      pricePerThousandDisplay.textContent = "Katalog sedang tidak tersedia";
       setCheckoutLoading(false);
       showToast(error.message);
     }
