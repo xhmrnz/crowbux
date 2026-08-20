@@ -21,6 +21,10 @@ CREATE TABLE IF NOT EXISTS orders (
   queue_number INTEGER NOT NULL CHECK (queue_number > 0),
   order_code TEXT NOT NULL UNIQUE,
   username TEXT NOT NULL,
+  roblox_user_id INTEGER,
+  roblox_display_name TEXT,
+  roblox_avatar_url TEXT,
+  roblox_ownership_verified INTEGER NOT NULL DEFAULT 0 CHECK (roblox_ownership_verified IN (0, 1)),
   robux_amount INTEGER NOT NULL CHECK (robux_amount > 0),
   package_price INTEGER NOT NULL CHECK (package_price >= 0),
   admin_fee INTEGER NOT NULL CHECK (admin_fee >= 0),
@@ -36,6 +40,50 @@ CREATE TABLE IF NOT EXISTS orders (
 
 CREATE INDEX IF NOT EXISTS orders_status_created_idx
 ON orders (status, created_at DESC);
+
+CREATE INDEX IF NOT EXISTS orders_roblox_user_idx
+ON orders (roblox_user_id, created_at DESC);
+
+CREATE TABLE IF NOT EXISTS roblox_oauth_flows (
+  state TEXT PRIMARY KEY,
+  code_verifier TEXT NOT NULL,
+  return_url TEXT NOT NULL,
+  expires_at INTEGER NOT NULL,
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS roblox_oauth_flows_expiry_idx
+ON roblox_oauth_flows (expires_at);
+
+CREATE TABLE IF NOT EXISTS roblox_oauth_exchange_codes (
+  code TEXT PRIMARY KEY,
+  roblox_user_id INTEGER NOT NULL,
+  username TEXT NOT NULL,
+  display_name TEXT NOT NULL,
+  avatar_url TEXT,
+  profile_url TEXT NOT NULL,
+  expires_at INTEGER NOT NULL,
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS roblox_oauth_exchange_expiry_idx
+ON roblox_oauth_exchange_codes (expires_at);
+
+CREATE TABLE IF NOT EXISTS roblox_authorization_sessions (
+  token_hash TEXT PRIMARY KEY,
+  roblox_user_id INTEGER NOT NULL,
+  username TEXT NOT NULL,
+  display_name TEXT NOT NULL,
+  avatar_url TEXT,
+  profile_url TEXT NOT NULL,
+  expires_at INTEGER NOT NULL,
+  used_at TEXT,
+  used_order_id TEXT,
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS roblox_authorization_user_expiry_idx
+ON roblox_authorization_sessions (roblox_user_id, expires_at);
 
 CREATE TRIGGER IF NOT EXISTS prevent_payment_without_stock
 BEFORE UPDATE OF status ON orders

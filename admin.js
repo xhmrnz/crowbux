@@ -31,6 +31,18 @@
     return Number(value).toLocaleString("id-ID");
   }
 
+  function escapeHtml(value) {
+    return String(value).replace(/[&<>'"]/g, function(character) {
+      return {
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        "'": "&#39;",
+        "\"": "&quot;"
+      }[character];
+    });
+  }
+
   function showToast(message) {
     clearTimeout(toastTimer);
     toast.textContent = message;
@@ -79,12 +91,15 @@
     orders.forEach(function(order) {
       var item = document.createElement("article");
       item.className = "admin-order-item";
+      var accountLabel = escapeHtml(order.robloxDisplayName || order.username) + " (@" + escapeHtml(order.username) + ")";
+      var identityLabel = order.robloxUserId ? " · ID " + escapeHtml(order.robloxUserId) : "";
+      var ownershipLabel = order.robloxOwnershipVerified ? " · OAuth verified" : " · API verified";
       item.innerHTML =
         '<div class="admin-order-main"><span>#' + String(order.queueNumber).padStart(3, "0") + ' · ' + order.orderDate + '</span>' +
-        '<strong>' + order.orderCode + '</strong><small>@' + order.username + ' · ' + formatNumber(order.robuxAmount) + ' Robux</small></div>' +
-        '<div class="admin-order-payment"><span>' + order.paymentMethod + '</span><strong>' + formatCurrency(order.total) + '</strong></div>' +
-        '<div class="admin-order-action"><span class="status-chip ' + order.status.toLowerCase() + '">' + order.status + '</span>' +
-        (order.status === "PENDING" ? '<button class="secondary-button" type="button" data-mark-paid="' + order.orderCode + '">Tandai dibayar</button>' : '') + '</div>';
+        '<strong>' + escapeHtml(order.orderCode) + '</strong><small>' + accountLabel + identityLabel + ownershipLabel + ' · ' + formatNumber(order.robuxAmount) + ' Robux</small></div>' +
+        '<div class="admin-order-payment"><span>' + escapeHtml(order.paymentMethod) + '</span><strong>' + formatCurrency(order.total) + '</strong></div>' +
+        '<div class="admin-order-action"><span class="status-chip ' + escapeHtml(order.status.toLowerCase()) + '">' + escapeHtml(order.status) + '</span>' +
+        (order.status === "PENDING" ? '<button class="secondary-button" type="button" data-mark-paid="' + escapeHtml(order.orderCode) + '">Tandai dibayar</button>' : '') + '</div>';
       orderList.appendChild(item);
     });
   }

@@ -67,7 +67,7 @@
             <a class="text-link" href="#how-it-works">Lihat cara kerjanya</a>
           </div>
           <ul class="trust-list" aria-label="Keunggulan layanan">
-            <li><span aria-hidden="true">✓</span> Tanpa login akun</li>
+            <li><span aria-hidden="true">✓</span> Tanpa membagikan password</li>
             <li><span aria-hidden="true">✓</span> Pembayaran lokal</li>
             <li><span aria-hidden="true">✓</span> Status transparan</li>
           </ul>
@@ -159,6 +159,29 @@
                 <p class="field-message" id="username-message" aria-live="polite">
                   Gunakan username, bukan display name.
                 </p>
+                <article class="roblox-account-preview" id="roblox-account-preview" hidden>
+                  <img id="roblox-account-avatar" src="" alt="" width="64" height="64" />
+                  <div class="roblox-account-copy">
+                    <div class="roblox-account-title">
+                      <strong id="roblox-account-display"></strong>
+                      <span class="account-verification-badge" id="roblox-account-badge">Akun valid</span>
+                    </div>
+                    <span id="roblox-account-username"></span>
+                    <small id="roblox-account-id"></small>
+                  </div>
+                  <a id="roblox-account-profile" href="https://www.roblox.com/" target="_blank" rel="noopener noreferrer">
+                    Profil ↗
+                  </a>
+                </article>
+                <div class="roblox-oauth-panel">
+                  <div>
+                    <strong>Verifikasi kepemilikan akun</strong>
+                    <p id="oauth-message">Login Roblox bersifat opsional dan tidak pernah membagikan password kepada Crowbux.</p>
+                  </div>
+                  <button class="secondary-button oauth-button" id="connect-roblox" type="button" disabled>
+                    Hubungkan Roblox
+                  </button>
+                </div>
               </div>
             </section>
 
@@ -388,7 +411,7 @@
               <span aria-hidden="true">−</span>
             </button>
             <div class="faq-answer">
-              <p>Tidak. Prototype ini dirancang hanya menggunakan username. Jangan pernah membagikan password, OTP, atau backup code kepada siapa pun.</p>
+              <p>Tidak. Pencarian akun hanya menggunakan username. Jika OAuth diaktifkan, proses login berlangsung langsung di Roblox dan Crowbux tidak menerima password, OTP, atau backup code.</p>
             </div>
           </article>
           <article class="faq-item">
@@ -397,7 +420,7 @@
               <span aria-hidden="true">+</span>
             </button>
             <div class="faq-answer" hidden>
-              <p>Belum ada estimasi nyata karena halaman ini masih berupa prototype frontend dan belum terhubung ke penyedia produk atau payment gateway.</p>
+              <p>Waktu proses bergantung pada antrean dan metode distribusi. Nomor pesanan serta status pembayaran dapat dipantau setelah checkout.</p>
             </div>
           </article>
           <article class="faq-item">

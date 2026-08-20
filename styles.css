@@ -769,6 +769,104 @@ input.is-invalid {
   color: var(--danger);
 }
 
+.roblox-account-preview {
+  display: grid;
+  grid-template-columns: 64px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 14px;
+  margin-top: 14px;
+  padding: 12px;
+  border: 1px solid rgba(105, 237, 179, 0.22);
+  border-radius: 16px;
+  background: linear-gradient(135deg, rgba(105, 237, 179, 0.08), rgba(185, 156, 255, 0.05));
+}
+
+.roblox-account-preview[hidden] {
+  display: none;
+}
+
+.roblox-account-preview img {
+  width: 64px;
+  height: 64px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.05);
+  object-fit: cover;
+}
+
+.roblox-account-copy {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.roblox-account-title {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.roblox-account-title strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.roblox-account-copy > span,
+.roblox-account-copy small {
+  color: var(--muted);
+  font-size: 0.72rem;
+}
+
+.account-verification-badge {
+  padding: 4px 7px;
+  border: 1px solid rgba(185, 156, 255, 0.24);
+  border-radius: 999px;
+  color: #cdbaff;
+  font-size: 0.58rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.account-verification-badge.is-ownership-verified {
+  border-color: rgba(105, 237, 179, 0.3);
+  color: var(--success);
+}
+
+.roblox-account-preview > a {
+  color: #cdbaff;
+  font-size: 0.7rem;
+  font-weight: 700;
+}
+
+.roblox-oauth-panel {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid var(--line);
+}
+
+.roblox-oauth-panel strong {
+  font-size: 0.76rem;
+}
+
+.roblox-oauth-panel p {
+  max-width: 520px;
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 0.66rem;
+  line-height: 1.5;
+}
+
+.oauth-button:disabled {
+  cursor: not-allowed;
+}
+
 .package-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -2045,6 +2143,25 @@ input.is-invalid {
 
   .secondary-button {
     min-height: 44px;
+  }
+
+  .roblox-account-preview {
+    grid-template-columns: 54px minmax(0, 1fr);
+  }
+
+  .roblox-account-preview img {
+    width: 54px;
+    height: 54px;
+  }
+
+  .roblox-account-preview > a {
+    grid-column: 2;
+    justify-self: start;
+  }
+
+  .roblox-oauth-panel {
+    align-items: stretch;
+    flex-direction: column;
   }
 
   .package-content {

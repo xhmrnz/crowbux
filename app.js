@@ -4,6 +4,15 @@
   var usernameInput = document.getElementById("roblox-username");
   var usernameButton = document.getElementById("check-username");
   var usernameMessage = document.getElementById("username-message");
+  var accountPreview = document.getElementById("roblox-account-preview");
+  var accountAvatar = document.getElementById("roblox-account-avatar");
+  var accountDisplay = document.getElementById("roblox-account-display");
+  var accountUsername = document.getElementById("roblox-account-username");
+  var accountId = document.getElementById("roblox-account-id");
+  var accountProfile = document.getElementById("roblox-account-profile");
+  var accountBadge = document.getElementById("roblox-account-badge");
+  var connectRobloxButton = document.getElementById("connect-roblox");
+  var oauthMessage = document.getElementById("oauth-message");
   var phoneInput = document.getElementById("phone");
   var emailInput = document.getElementById("email");
   var checkoutButton = form.querySelector(".checkout-button");
@@ -15,6 +24,9 @@
   var orderPollTimer;
   var activeOrderCode = "";
   var usernameVerified = false;
+  var verifiedAccount = null;
+  var robloxAuthorizationToken = "";
+  var oauthEnabled = false;
   var availableStock = 0;
   var catalogReady = false;
 
@@ -72,6 +84,38 @@
 
   function validUsername(username) {
     return /^[A-Za-z0-9_]{3,20}$/.test(username);
+  }
+
+  function resetVerifiedAccount() {
+    usernameVerified = false;
+    verifiedAccount = null;
+    robloxAuthorizationToken = "";
+    accountPreview.hidden = true;
+    accountAvatar.removeAttribute("src");
+  }
+
+  function renderVerifiedAccount(account) {
+    verifiedAccount = account;
+    usernameVerified = true;
+    usernameInput.value = account.username;
+    accountDisplay.textContent = account.displayName || account.username;
+    accountUsername.textContent = "@" + account.username;
+    accountId.textContent = "User ID " + account.id;
+    accountProfile.href = account.profileUrl;
+    accountAvatar.src = account.avatarUrl || "favicon.svg";
+    accountAvatar.alt = "Avatar Roblox " + account.username;
+    accountBadge.textContent = account.ownershipVerified ? "Pemilik terverifikasi" : "Akun valid";
+    accountBadge.classList.toggle("is-ownership-verified", Boolean(account.ownershipVerified));
+    accountPreview.hidden = false;
+    usernameInput.classList.remove("is-invalid");
+    setUsernameMessage(
+      account.ownershipVerified
+        ? "Kepemilikan akun berhasil diverifikasi melalui Roblox OAuth."
+        : "Akun Roblox ditemukan. Pastikan avatar dan nama akun sudah benar.",
+      "success"
+    );
+    usernameButton.textContent = "Cek ulang";
+    updateSummary();
   }
 
   function showToast(message) {
@@ -138,9 +182,9 @@
     }
   }
 
-  function checkUsername() {
+  async function checkUsername() {
     var username = usernameInput.value.trim();
-    usernameVerified = false;
+    resetVerifiedAccount();
 
     if (!validUsername(username)) {
       usernameInput.classList.add("is-invalid");
@@ -152,15 +196,73 @@
     usernameInput.classList.remove("is-invalid");
     usernameButton.disabled = true;
     usernameButton.textContent = "Mengecek…";
-    setUsernameMessage("Mencari akun demo…", "neutral");
+    setUsernameMessage("Mencari akun di Roblox…", "neutral");
 
-    window.setTimeout(function() {
-      usernameVerified = true;
+    try {
+      var response = await request("/api/roblox/users/resolve", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username: username })
+      });
+      renderVerifiedAccount(response.account);
+    } catch (error) {
+      usernameInput.classList.add("is-invalid");
+      setUsernameMessage(error.message, "error");
+      usernameButton.textContent = "Coba lagi";
+    } finally {
       usernameButton.disabled = false;
-      usernameButton.textContent = "Cek ulang";
-      setUsernameMessage("Akun ditemukan dalam simulasi: @" + username, "success");
-      updateSummary();
-    }, 700);
+    }
+  }
+
+  function cleanOAuthQuery() {
+    var url = new URL(window.location.href);
+    url.searchParams.delete("roblox_auth_code");
+    url.searchParams.delete("roblox_oauth_error");
+    window.history.replaceState({}, "", url.pathname + url.search + url.hash);
+  }
+
+  async function loadRobloxOAuth() {
+    var currentUrl = new URL(window.location.href);
+    var exchangeCode = currentUrl.searchParams.get("roblox_auth_code");
+    var oauthError = currentUrl.searchParams.get("roblox_oauth_error");
+    cleanOAuthQuery();
+
+    try {
+      var status = await request("/api/roblox/oauth/status");
+      oauthEnabled = Boolean(status.enabled);
+      connectRobloxButton.disabled = !oauthEnabled;
+      oauthMessage.textContent = oauthEnabled
+        ? "Hubungkan akun untuk membuktikan bahwa akun Roblox tersebut milikmu."
+        : "Verifikasi kepemilikan akan tersedia setelah aplikasi OAuth Roblox diaktifkan.";
+    } catch (error) {
+      oauthEnabled = false;
+      connectRobloxButton.disabled = true;
+      oauthMessage.textContent = "Status login Roblox belum dapat dimuat.";
+    }
+
+    if (oauthError) {
+      showToast(oauthError);
+      return;
+    }
+    if (!exchangeCode) return;
+
+    connectRobloxButton.disabled = true;
+    connectRobloxButton.textContent = "Memverifikasi…";
+    try {
+      var response = await request("/api/roblox/oauth/redeem", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code: exchangeCode })
+      });
+      robloxAuthorizationToken = response.authorizationToken;
+      renderVerifiedAccount(response.account);
+      showToast("Kepemilikan akun Roblox berhasil diverifikasi.");
+    } catch (error) {
+      showToast(error.message);
+    } finally {
+      connectRobloxButton.disabled = !oauthEnabled;
+      connectRobloxButton.textContent = "Hubungkan Roblox";
+    }
   }
 
   function validateContact() {
@@ -230,6 +332,8 @@
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         username: usernameInput.value.trim(),
+        robloxUserId: verifiedAccount.id,
+        robloxAuthorizationToken: robloxAuthorizationToken,
         robuxAmount: Number(selectedPackage.value),
         paymentMethod: selectedPayment.value,
         phone: phoneInput.value,
@@ -246,10 +350,18 @@
 
   usernameButton.addEventListener("click", checkUsername);
   usernameInput.addEventListener("input", function() {
-    usernameVerified = false;
+    resetVerifiedAccount();
     usernameInput.classList.remove("is-invalid");
     setUsernameMessage("Gunakan username, bukan display name.", "neutral");
     updateSummary();
+  });
+
+  connectRobloxButton.addEventListener("click", function() {
+    if (!oauthEnabled) return;
+    var returnUrl = new URL(window.location.href);
+    returnUrl.searchParams.delete("roblox_auth_code");
+    returnUrl.searchParams.delete("roblox_oauth_error");
+    window.location.href = apiUrl("/api/roblox/oauth/start?return_to=" + encodeURIComponent(returnUrl.toString()));
   });
 
   form.querySelectorAll('input[name="package"], input[name="payment"]').forEach(function(input) {
@@ -273,7 +385,7 @@
       return;
     }
     if (!validUsername(usernameInput.value.trim())) {
-      checkUsername();
+      void checkUsername();
       showToast("Periksa username Roblox terlebih dahulu.");
       return;
     }
@@ -324,4 +436,5 @@
   document.getElementById("footer-year").textContent = "© " + new Date().getFullYear();
   updateSummary();
   loadCatalog();
+  loadRobloxOAuth();
 })();
