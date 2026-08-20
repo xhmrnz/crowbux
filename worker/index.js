@@ -6,6 +6,9 @@ const ROBLOX_OAUTH_URL = "https://apis.roblox.com/oauth";
 const OAUTH_FLOW_TTL_SECONDS = 10 * 60;
 const OAUTH_EXCHANGE_TTL_SECONDS = 5 * 60;
 const OAUTH_SESSION_TTL_SECONDS = 20 * 60;
+const DANA_QRIS_PATH = "/v1.0/qr/qr-mpm-generate.htm";
+const DANA_NOTIFY_PATH = "/api/payments/dana/notify";
+const DANA_PAYMENT_TTL_SECONDS = 15 * 60;
 const MAX_EXTERNAL_RESPONSE_BYTES = 512 * 1024;
 
 const PACKAGE_AMOUNTS = [100, 200, 300, 500, 1000, 2000, 3000, 5000, 10000];
@@ -48,6 +51,14 @@ export default {
         return json({ enabled: oauthEnabled(env) }, 200, corsHeaders);
       }
 
+      if (request.method === "GET" && url.pathname === "/api/payments/dana/status") {
+        return json({ enabled: danaConfigured(env) }, 200, corsHeaders);
+      }
+
+      if (request.method === "POST" && url.pathname === DANA_NOTIFY_PATH) {
+        return await handleDanaNotification(request, env);
+      }
+
       if (request.method === "GET" && url.pathname === "/api/roblox/oauth/start") {
         return await startRobloxOAuth(url, env);
       }
@@ -66,7 +77,12 @@ export default {
 
       const orderMatch = url.pathname.match(/^\/api\/orders\/([A-Z0-9-]+)$/);
       if (request.method === "GET" && orderMatch) {
-        return await getOrder(orderMatch[1], env, corsHeaders);
+        return await getOrder(orderMatch[1], request, env, corsHeaders);
+      }
+
+      const danaPaymentMatch = url.pathname.match(/^\/api\/orders\/([A-Z0-9-]+)\/payments\/dana$/);
+      if (request.method === "POST" && danaPaymentMatch) {
+        return await createDanaPayment(danaPaymentMatch[1], request, env, corsHeaders);
       }
 
       const paymentMatch = url.pathname.match(/^\/api\/orders\/([A-Z0-9-]+)\/confirm-payment$/);
@@ -369,6 +385,9 @@ async function createOrder(request, env, corsHeaders) {
   if (adminFee === undefined) {
     return json({ error: "Metode pembayaran tidak valid." }, 400, corsHeaders);
   }
+  if (paymentMethod === "DANA" && !danaConfigured(env)) {
+    return json({ error: "Pembayaran DANA belum tersedia." }, 503, corsHeaders);
+  }
   if (!/^(?:62|0)8\d{8,12}$/.test(phone)) {
     return json({ error: "Nomor WhatsApp tidak valid." }, 400, corsHeaders);
   }
@@ -406,6 +425,8 @@ async function createOrder(request, env, corsHeaders) {
 
   const orderDate = jakartaDate(new Date());
   const orderId = crypto.randomUUID();
+  const checkoutToken = randomToken(32);
+  const checkoutTokenHash = await sha256Hex(checkoutToken);
   const statements = [
     env.DB.prepare(`
       INSERT INTO daily_counters (order_date, last_number)
@@ -416,11 +437,12 @@ async function createOrder(request, env, corsHeaders) {
       INSERT INTO orders (
         id, order_date, queue_number, order_code, username, roblox_user_id,
         roblox_display_name, roblox_avatar_url, roblox_ownership_verified,
-        robux_amount, package_price, admin_fee, payment_method, phone, email
+        robux_amount, package_price, admin_fee, payment_method, phone, email,
+        checkout_token_hash
       )
       SELECT ?, ?, last_number,
         'CBX-' || REPLACE(?, '-', '') || '-' || printf('%03d', last_number),
-        ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
+        ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
       FROM daily_counters
       WHERE order_date = ?
       RETURNING order_code, order_date, queue_number, username, roblox_user_id,
@@ -441,6 +463,7 @@ async function createOrder(request, env, corsHeaders) {
       paymentMethod,
       phone,
       email || null,
+      checkoutTokenHash,
       orderDate
     )
   ];
@@ -456,18 +479,436 @@ async function createOrder(request, env, corsHeaders) {
   const results = await env.DB.batch(statements);
   const order = results[1] && results[1].results && results[1].results[0];
   if (!order) throw new Error("ORDER_CREATION_FAILED");
-  return json({ order: serializeOrder(order) }, 201, corsHeaders);
+  return json({ order: serializeOrder(order), checkoutToken }, 201, corsHeaders);
 }
 
-async function getOrder(orderCode, env, corsHeaders) {
+async function getOrder(orderCode, request, env, corsHeaders) {
   const order = await env.DB.prepare(`
-    SELECT order_code, order_date, queue_number, username, roblox_user_id,
+    SELECT id, order_code, order_date, queue_number, username, roblox_user_id,
       roblox_display_name, roblox_avatar_url, roblox_ownership_verified,
-      robux_amount, package_price, admin_fee, payment_method, status, created_at, paid_at
+      robux_amount, package_price, admin_fee, payment_method, status, created_at, paid_at,
+      checkout_token_hash
     FROM orders WHERE order_code = ?
   `).bind(orderCode).first();
   if (!order) return json({ error: "Pesanan tidak ditemukan." }, 404, corsHeaders);
-  return json({ order: serializeOrder(order) }, 200, corsHeaders);
+
+  let payment = null;
+  const checkoutToken = bearerToken(request);
+  if (checkoutToken) {
+    if (!(await checkoutAuthorized(checkoutToken, order.checkout_token_hash))) {
+      return json({ error: "Token checkout tidak valid." }, 401, corsHeaders);
+    }
+    const danaPayment = await getDanaPaymentByOrderId(order.id, env);
+    payment = danaPayment ? serializeDanaPayment(danaPayment) : null;
+  }
+
+  return json({ order: serializeOrder(order), payment }, 200, corsHeaders);
+}
+
+function danaConfigured(env) {
+  return Boolean(
+    env.DANA_API_BASE_URL &&
+    env.DANA_PARTNER_ID &&
+    env.DANA_MERCHANT_ID &&
+    env.DANA_STORE_ID &&
+    env.DANA_CHANNEL_ID &&
+    env.DANA_ORIGIN &&
+    env.DANA_PRIVATE_KEY &&
+    env.DANA_PUBLIC_KEY
+  );
+}
+
+async function createDanaPayment(orderCode, request, env, corsHeaders) {
+  if (!danaConfigured(env)) {
+    throw new HttpError(503, "Pembayaran DANA belum dikonfigurasi oleh admin.");
+  }
+
+  const order = await env.DB.prepare(`
+    SELECT id, order_code, payment_method, status, package_price, admin_fee, checkout_token_hash
+    FROM orders WHERE order_code = ?
+  `).bind(orderCode).first();
+  if (!order) throw new HttpError(404, "Pesanan tidak ditemukan.");
+
+  const checkoutToken = bearerToken(request);
+  if (!checkoutToken || !(await checkoutAuthorized(checkoutToken, order.checkout_token_hash))) {
+    throw new HttpError(401, "Token checkout tidak valid.");
+  }
+  if (order.payment_method !== "DANA") {
+    throw new HttpError(409, "Pesanan ini tidak menggunakan metode pembayaran DANA.");
+  }
+
+  let payment = await getDanaPaymentByOrderId(order.id, env);
+  if (payment && payment.status === "PAID") {
+    return json({ payment: serializeDanaPayment(payment) }, 200, corsHeaders);
+  }
+  if (order.status !== "PENDING") {
+    throw new HttpError(409, "Pesanan tidak dapat menerima pembayaran baru.");
+  }
+  if (payment && payment.status === "PENDING" && Number(payment.expires_at) > unixNow()) {
+    return json({ payment: serializeDanaPayment(payment) }, 200, corsHeaders);
+  }
+  if (payment && Number(payment.expires_at) <= unixNow()) {
+    await env.DB.prepare(`
+      UPDATE dana_payments SET status = 'EXPIRED', updated_at = CURRENT_TIMESTAMP WHERE order_id = ?
+    `).bind(order.id).run();
+    throw new HttpError(410, "QR pembayaran DANA sudah kedaluwarsa. Silakan buat pesanan baru.");
+  }
+
+  if (!payment) {
+    const partnerReferenceNo = order.order_code.replace(/-/g, "").slice(0, 25);
+    const externalId = crypto.randomUUID().replace(/-/g, "");
+    const expiresAt = unixNow() + DANA_PAYMENT_TTL_SECONDS;
+    await env.DB.prepare(`
+      INSERT INTO dana_payments (
+        order_id, partner_reference_no, external_id, amount, status, expires_at
+      ) VALUES (?, ?, ?, ?, 'CREATING', ?)
+    `).bind(
+      order.id,
+      partnerReferenceNo,
+      externalId,
+      Number(order.package_price) + Number(order.admin_fee),
+      expiresAt
+    ).run();
+    payment = await getDanaPaymentByOrderId(order.id, env);
+  }
+
+  const body = buildDanaQrisBody(order, payment, env);
+  const bodyText = JSON.stringify(body);
+  const timestamp = danaTimestamp(new Date());
+  let signature;
+  try {
+    signature = await signDanaRequest("POST", DANA_QRIS_PATH, bodyText, timestamp, env.DANA_PRIVATE_KEY);
+  } catch (error) {
+    console.error(JSON.stringify({ event: "dana_signing_error", message: String(error.message || error) }));
+    throw new HttpError(503, "Konfigurasi signature DANA tidak valid.");
+  }
+
+  try {
+    const danaResponse = await fetchDanaJson(
+      `${String(env.DANA_API_BASE_URL).replace(/\/$/, "")}${DANA_QRIS_PATH}`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-TIMESTAMP": timestamp,
+          "X-SIGNATURE": signature,
+          "X-PARTNER-ID": env.DANA_PARTNER_ID,
+          "X-EXTERNAL-ID": payment.external_id,
+          "CHANNEL-ID": env.DANA_CHANNEL_ID,
+          "ORIGIN": env.DANA_ORIGIN
+        },
+        body: bodyText
+      },
+      "dana_generate_qris"
+    );
+
+    if (danaResponse.responseCode !== "2004700") {
+      await markDanaPaymentFailed(payment.order_id, danaResponse.responseCode, danaResponse.responseMessage, env);
+      throw new HttpError(502, "DANA menolak pembuatan QR pembayaran.", `DANA_${danaResponse.responseCode}`);
+    }
+    if (!danaResponse.qrContent && !danaResponse.qrImage && !danaResponse.qrUrl) {
+      await markDanaPaymentFailed(payment.order_id, danaResponse.responseCode, "QR_NOT_RETURNED", env);
+      throw new HttpError(502, "DANA tidak mengembalikan QR pembayaran.");
+    }
+
+    await env.DB.prepare(`
+      UPDATE dana_payments
+      SET dana_reference_no = ?, qr_content = ?, qr_image = ?, qr_url = ?, redirect_url = ?,
+        merchant_name = ?, status = 'PENDING', response_code = ?, response_message = ?,
+        updated_at = CURRENT_TIMESTAMP
+      WHERE order_id = ?
+    `).bind(
+      danaResponse.referenceNo || null,
+      danaResponse.qrContent || null,
+      danaResponse.qrImage || null,
+      danaResponse.qrUrl || null,
+      danaResponse.redirectUrl || null,
+      danaResponse.merchantName || null,
+      danaResponse.responseCode,
+      danaResponse.responseMessage || null,
+      payment.order_id
+    ).run();
+
+    payment = await getDanaPaymentByOrderId(order.id, env);
+    console.log(JSON.stringify({ event: "dana_qris_created", orderCode, referenceNo: payment.dana_reference_no }));
+    return json({ payment: serializeDanaPayment(payment) }, 201, corsHeaders);
+  } catch (error) {
+    if (!(error instanceof HttpError)) {
+      await markDanaPaymentFailed(payment.order_id, "DANA_REQUEST_FAILED", String(error.message || error), env);
+    }
+    throw error;
+  }
+}
+
+function buildDanaQrisBody(order, payment, env) {
+  const body = {
+    merchantId: env.DANA_MERCHANT_ID,
+    storeId: env.DANA_STORE_ID,
+    partnerReferenceNo: payment.partner_reference_no,
+    amount: {
+      value: formatDanaAmount(payment.amount),
+      currency: "IDR"
+    },
+    validityPeriod: danaTimestamp(new Date(Number(payment.expires_at) * 1000)),
+    additionalInfo: {
+      terminalSource: "MER",
+      envInfo: {
+        websiteLanguage: "id_ID",
+        sourcePlatform: "IPG",
+        orderTerminalType: "WEB",
+        terminalType: "WEB",
+        osType: "WEB",
+        appVersion: "1.0",
+        sdkVersion: "1.0",
+        merchantAppVersion: "1.0",
+        extendInfo: JSON.stringify({ orderCode: order.order_code })
+      }
+    }
+  };
+  if (env.DANA_SUB_MERCHANT_ID) body.subMerchantId = env.DANA_SUB_MERCHANT_ID;
+  if (env.DANA_TERMINAL_ID) body.terminalId = env.DANA_TERMINAL_ID;
+  return body;
+}
+
+async function handleDanaNotification(request, env) {
+  const responseTimestamp = danaTimestamp(new Date());
+  try {
+    if (!danaConfigured(env)) throw new Error("DANA_NOT_CONFIGURED");
+    if (request.headers.get("X-PARTNER-ID") !== env.DANA_PARTNER_ID) {
+      return danaJson("4015600", "Unauthorized", responseTimestamp, 401);
+    }
+
+    const contentLength = Number(request.headers.get("Content-Length") || 0);
+    if (contentLength > MAX_EXTERNAL_RESPONSE_BYTES) throw new Error("DANA_NOTIFY_TOO_LARGE");
+    const rawBody = await request.text();
+    if (rawBody.length > MAX_EXTERNAL_RESPONSE_BYTES) throw new Error("DANA_NOTIFY_TOO_LARGE");
+    const payload = JSON.parse(rawBody);
+    const timestamp = request.headers.get("X-TIMESTAMP") || "";
+    const signature = request.headers.get("X-SIGNATURE") || "";
+    if (!validDanaTimestamp(timestamp)) {
+      return danaJson("4015600", "Unauthorized", responseTimestamp, 401);
+    }
+
+    const signatureValid = await verifyDanaSignature(
+      "POST",
+      DANA_NOTIFY_PATH,
+      JSON.stringify(payload),
+      timestamp,
+      signature,
+      env.DANA_PUBLIC_KEY
+    );
+    if (!signatureValid) {
+      return danaJson("4015600", "Unauthorized", responseTimestamp, 401);
+    }
+
+    const payment = await env.DB.prepare(`
+      SELECT dp.*, o.status AS order_status, o.package_price, o.admin_fee
+      FROM dana_payments dp
+      JOIN orders o ON o.id = dp.order_id
+      WHERE dp.partner_reference_no = ?
+    `).bind(String(payload.originalPartnerReferenceNo || "")).first();
+    if (!payment) throw new Error("DANA_PAYMENT_NOT_FOUND");
+    if (String(payload.merchantId || "") !== env.DANA_MERCHANT_ID) throw new Error("DANA_MERCHANT_MISMATCH");
+    if (String(payload.amount?.currency || "") !== "IDR") throw new Error("DANA_CURRENCY_MISMATCH");
+    if (Number(payload.amount?.value) !== Number(payment.amount)) throw new Error("DANA_AMOUNT_MISMATCH");
+
+    const latestStatus = String(payload.latestTransactionStatus || "");
+    const referenceNo = String(payload.originalReferenceNo || payment.dana_reference_no || "").slice(0, 100);
+    if (latestStatus === "00") {
+      await env.DB.batch([
+        env.DB.prepare(`
+          UPDATE orders
+          SET status = 'PAID', payment_reference = ?, paid_at = COALESCE(paid_at, CURRENT_TIMESTAMP)
+          WHERE id = ? AND status = 'PENDING'
+        `).bind(referenceNo || "DANA-PAID", payment.order_id),
+        env.DB.prepare(`
+          UPDATE dana_payments
+          SET status = 'PAID', dana_reference_no = ?, paid_at = COALESCE(paid_at, CURRENT_TIMESTAMP),
+            response_code = ?, response_message = ?, updated_at = CURRENT_TIMESTAMP
+          WHERE order_id = ?
+        `).bind(referenceNo || null, latestStatus, payload.transactionStatusDesc || "Paid", payment.order_id)
+      ]);
+      console.log(JSON.stringify({ event: "dana_payment_paid", partnerReferenceNo: payment.partner_reference_no }));
+    } else if (latestStatus === "05") {
+      await env.DB.batch([
+        env.DB.prepare("UPDATE orders SET status = 'CANCELLED' WHERE id = ? AND status = 'PENDING'").bind(payment.order_id),
+        env.DB.prepare(`
+          UPDATE dana_payments
+          SET status = 'EXPIRED', response_code = ?, response_message = ?, updated_at = CURRENT_TIMESTAMP
+          WHERE order_id = ? AND status != 'PAID'
+        `).bind(latestStatus, payload.transactionStatusDesc || "Expired", payment.order_id)
+      ]);
+    } else {
+      await env.DB.prepare(`
+        UPDATE dana_payments
+        SET status = 'PENDING', response_code = ?, response_message = ?, updated_at = CURRENT_TIMESTAMP
+        WHERE order_id = ? AND status != 'PAID'
+      `).bind(latestStatus || null, payload.transactionStatusDesc || null, payment.order_id).run();
+    }
+
+    return danaJson("2005600", "Successful", responseTimestamp, 200);
+  } catch (error) {
+    console.error(JSON.stringify({ event: "dana_notify_error", message: String(error.message || error) }));
+    return danaJson("5005601", "Internal Server Error", responseTimestamp, 500);
+  }
+}
+
+async function getDanaPaymentByOrderId(orderId, env) {
+  return env.DB.prepare(`
+    SELECT order_id, partner_reference_no, external_id, dana_reference_no, amount,
+      qr_content, qr_image, qr_url, redirect_url, merchant_name, status, expires_at, paid_at
+    FROM dana_payments WHERE order_id = ?
+  `).bind(orderId).first();
+}
+
+async function markDanaPaymentFailed(orderId, responseCode, responseMessage, env) {
+  await env.DB.prepare(`
+    UPDATE dana_payments
+    SET status = 'FAILED', response_code = ?, response_message = ?, updated_at = CURRENT_TIMESTAMP
+    WHERE order_id = ?
+  `).bind(String(responseCode || "").slice(0, 64), String(responseMessage || "").slice(0, 256), orderId).run();
+}
+
+function bearerToken(request) {
+  const authorization = request.headers.get("Authorization") || "";
+  return authorization.startsWith("Bearer ") ? authorization.slice(7).trim() : "";
+}
+
+async function checkoutAuthorized(token, storedHash) {
+  if (!token || !storedHash) return false;
+  return timingSafeEqual(await sha256Hex(token), storedHash);
+}
+
+function formatDanaAmount(value) {
+  return Number(value).toFixed(2);
+}
+
+function danaTimestamp(date) {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: JAKARTA_TIME_ZONE,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hourCycle: "h23"
+  }).formatToParts(date);
+  const values = Object.fromEntries(parts.map((part) => [part.type, part.value]));
+  return `${values.year}-${values.month}-${values.day}T${values.hour}:${values.minute}:${values.second}+07:00`;
+}
+
+function validDanaTimestamp(value) {
+  const parsed = Date.parse(value);
+  return Number.isFinite(parsed) && Math.abs(Date.now() - parsed) <= DANA_PAYMENT_TTL_SECONDS * 1000;
+}
+
+async function signDanaRequest(method, path, body, timestamp, privateKeyPem) {
+  const bodyHash = await sha256Hex(body);
+  const stringToSign = `${method}:${path}:${bodyHash}:${timestamp}`;
+  const privateKey = await crypto.subtle.importKey(
+    "pkcs8",
+    pemToArrayBuffer(privateKeyPem, "PRIVATE KEY"),
+    { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" },
+    false,
+    ["sign"]
+  );
+  const signature = await crypto.subtle.sign(
+    "RSASSA-PKCS1-v1_5",
+    privateKey,
+    new TextEncoder().encode(stringToSign)
+  );
+  return standardBase64(new Uint8Array(signature));
+}
+
+async function verifyDanaSignature(method, path, body, timestamp, signature, publicKeyPem) {
+  if (!signature) return false;
+  try {
+    const bodyHash = await sha256Hex(body);
+    const stringToVerify = `${method}:${path}:${bodyHash}:${timestamp}`;
+    const publicKey = await crypto.subtle.importKey(
+      "spki",
+      pemToArrayBuffer(publicKeyPem, "PUBLIC KEY"),
+      { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" },
+      false,
+      ["verify"]
+    );
+    return await crypto.subtle.verify(
+      "RSASSA-PKCS1-v1_5",
+      publicKey,
+      base64ToArrayBuffer(signature),
+      new TextEncoder().encode(stringToVerify)
+    );
+  } catch {
+    return false;
+  }
+}
+
+function pemToArrayBuffer(pem, label) {
+  const normalized = String(pem || "").replace(/\\n/g, "\n").trim();
+  const base64 = normalized
+    .replace(`-----BEGIN ${label}-----`, "")
+    .replace(`-----END ${label}-----`, "")
+    .replace(/\s/g, "");
+  if (!base64) throw new Error(`DANA_${label.replace(/ /g, "_")}_INVALID`);
+  return base64ToArrayBuffer(base64);
+}
+
+function base64ToArrayBuffer(value) {
+  const binary = atob(String(value).replace(/\s/g, ""));
+  return Uint8Array.from(binary, (character) => character.charCodeAt(0)).buffer;
+}
+
+function standardBase64(bytes) {
+  let binary = "";
+  bytes.forEach((byte) => { binary += String.fromCharCode(byte); });
+  return btoa(binary);
+}
+
+async function fetchDanaJson(url, init, eventName) {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 9000);
+  try {
+    const response = await fetch(url, { ...init, signal: controller.signal });
+    const contentLength = Number(response.headers.get("Content-Length") || 0);
+    if (contentLength > MAX_EXTERNAL_RESPONSE_BYTES) throw new Error(`${eventName}_RESPONSE_TOO_LARGE`);
+    const responseText = await response.text();
+    if (new TextEncoder().encode(responseText).byteLength > MAX_EXTERNAL_RESPONSE_BYTES) {
+      throw new Error(`${eventName}_RESPONSE_TOO_LARGE`);
+    }
+    let payload;
+    try {
+      payload = JSON.parse(responseText);
+    } catch {
+      throw new Error(`${eventName}_INVALID_JSON`);
+    }
+    if (!response.ok) {
+      const responseCode = String(payload.responseCode || response.status);
+      const responseMessage = String(payload.responseMessage || `HTTP ${response.status}`);
+      throw new HttpError(502, "DANA sedang tidak dapat memproses pembayaran.", `${eventName}_${responseCode}_${responseMessage}`);
+    }
+    return payload;
+  } catch (error) {
+    if (error && error.name === "AbortError") {
+      throw new HttpError(504, "DANA terlalu lama merespons. Silakan coba lagi.", `${eventName}_TIMEOUT`);
+    }
+    if (error instanceof HttpError) throw error;
+    throw new HttpError(502, "DANA sedang tidak tersedia. Silakan coba lagi.", String(error.message || error));
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+function danaJson(responseCode, responseMessage, timestamp, status) {
+  return Response.json({ responseCode, responseMessage }, {
+    status,
+    headers: {
+      "Content-Type": "application/json; charset=utf-8",
+      "Cache-Control": "no-store",
+      "X-Content-Type-Options": "nosniff",
+      "X-TIMESTAMP": timestamp
+    }
+  });
 }
 
 async function confirmPayment(orderCode, request, env, corsHeaders) {
@@ -602,6 +1043,22 @@ function serializeOrder(order) {
     status: order.status,
     createdAt: order.created_at,
     paidAt: order.paid_at || null
+  };
+}
+
+function serializeDanaPayment(payment) {
+  return {
+    provider: "DANA_QRIS",
+    status: payment.status,
+    amount: Number(payment.amount),
+    referenceNo: payment.dana_reference_no || null,
+    qrContent: payment.qr_content || null,
+    qrImage: payment.qr_image || null,
+    qrUrl: payment.qr_url || null,
+    redirectUrl: payment.redirect_url || null,
+    merchantName: payment.merchant_name || null,
+    expiresAt: payment.expires_at ? Number(payment.expires_at) : null,
+    paidAt: payment.paid_at || null
   };
 }
 

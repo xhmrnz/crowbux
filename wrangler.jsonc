@@ -8,7 +8,9 @@
   "vars": {
     "ALLOWED_ORIGINS": "https://xhmrnz.me,http://localhost:5500,http://127.0.0.1:5500,http://localhost:8787",
     "CROWBUX_FRONTEND_URL": "https://xhmrnz.me/crowbux/",
-    "ROBLOX_OAUTH_REDIRECT_URI": "https://crowbux-api.crowbux-stock.workers.dev/api/roblox/oauth/callback"
+    "ROBLOX_OAUTH_REDIRECT_URI": "https://crowbux-api.crowbux-stock.workers.dev/api/roblox/oauth/callback",
+    "DANA_API_BASE_URL": "https://api.sandbox.dana.id",
+    "DANA_ORIGIN": "https://xhmrnz.me"
   },
   "d1_databases": [
     {

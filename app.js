@@ -19,9 +19,19 @@
   var modal = document.getElementById("success-modal");
   var toast = document.getElementById("toast");
   var stockDisplays = document.querySelectorAll("[data-stock-display]");
+  var danaPaymentInput = document.getElementById("payment-dana");
+  var danaPaymentNote = document.getElementById("dana-payment-note");
+  var danaPaymentPanel = document.getElementById("dana-payment-panel");
+  var danaQrCode = document.getElementById("dana-qr-code");
+  var danaPaymentAmount = document.getElementById("dana-payment-amount");
+  var danaPaymentMessage = document.getElementById("dana-payment-message");
+  var danaPaymentExpiry = document.getElementById("dana-payment-expiry");
+  var danaPaymentRedirect = document.getElementById("dana-payment-redirect");
+  var danaPaymentRetry = document.getElementById("dana-payment-retry");
   var toastTimer;
   var orderPollTimer;
   var activeOrderCode = "";
+  var checkoutToken = "";
   var usernameVerified = false;
   var verifiedAccount = null;
   var robloxAuthorizationToken = "";
@@ -179,6 +189,22 @@
     }
   }
 
+  async function loadDanaStatus() {
+    try {
+      var status = await request("/api/payments/dana/status");
+      danaPaymentInput.disabled = !status.enabled;
+      danaPaymentNote.textContent = status.enabled ? "QR dinamis · Admin Rp1.500" : "Belum tersedia";
+      if (!status.enabled && danaPaymentInput.checked) {
+        var qrisInput = form.querySelector('input[name="payment"][value="QRIS"]');
+        if (qrisInput) qrisInput.checked = true;
+      }
+    } catch {
+      danaPaymentInput.disabled = true;
+      danaPaymentNote.textContent = "Status layanan tidak tersedia";
+    }
+    updateSummary();
+  }
+
   async function checkUsername() {
     var username = usernameInput.value.trim();
     resetVerifiedAccount();
@@ -275,19 +301,105 @@
   function setOrderStatus(status) {
     var statusElement = document.getElementById("order-status");
     var isPaid = status === "PAID";
+    var isCancelled = status === "CANCELLED";
     statusElement.classList.toggle("is-paid", isPaid);
-    statusElement.querySelector("strong").textContent = isPaid ? "Pembayaran terverifikasi" : "Menunggu pembayaran";
+    statusElement.classList.toggle("is-cancelled", isCancelled);
+    statusElement.querySelector("strong").textContent = isPaid
+      ? "Pembayaran terverifikasi"
+      : isCancelled ? "Pembayaran kedaluwarsa" : "Menunggu pembayaran";
     statusElement.querySelector("span").textContent = isPaid
       ? "Stok telah dikurangi dan pesanan siap diproses."
-      : "Stok baru berkurang setelah pembayaran diverifikasi.";
+      : isCancelled
+        ? "Pesanan dibatalkan tanpa mengurangi stok. Silakan buat pesanan baru."
+        : "Stok baru berkurang setelah pembayaran diverifikasi.";
   }
 
-  function openModal(order) {
+  function safePaymentUrl(value) {
+    try {
+      var parsed = new URL(value);
+      return parsed.protocol === "https:" ? parsed.toString() : "";
+    } catch {
+      return "";
+    }
+  }
+
+  function resetDanaPaymentPanel() {
+    danaPaymentPanel.hidden = true;
+    danaQrCode.replaceChildren();
+    danaPaymentAmount.textContent = "Rp0";
+    danaPaymentMessage.textContent = "Scan QR menggunakan DANA atau aplikasi pembayaran yang mendukung QRIS.";
+    danaPaymentExpiry.textContent = "";
+    danaPaymentRedirect.hidden = true;
+    danaPaymentRedirect.removeAttribute("href");
+    danaPaymentRetry.hidden = true;
+  }
+
+  function renderDanaPayment(payment) {
+    resetDanaPaymentPanel();
+    if (!payment || payment.status === "PAID") return;
+
+    danaPaymentPanel.hidden = false;
+    danaPaymentAmount.textContent = formatCurrency(payment.amount);
+    if (payment.expiresAt) {
+      danaPaymentExpiry.textContent = "Berlaku sampai " + new Date(payment.expiresAt * 1000).toLocaleString("id-ID", {
+        dateStyle: "medium",
+        timeStyle: "short"
+      });
+    }
+
+    var qrImageUrl = payment.qrImage
+      ? (/^data:image\//i.test(payment.qrImage) ? payment.qrImage : "data:image/png;base64," + payment.qrImage)
+      : safePaymentUrl(payment.qrUrl);
+    if (qrImageUrl) {
+      var image = document.createElement("img");
+      image.src = qrImageUrl;
+      image.alt = "QR pembayaran DANA senilai " + formatCurrency(payment.amount);
+      image.width = 220;
+      image.height = 220;
+      danaQrCode.appendChild(image);
+    } else if (payment.qrContent && window.QRCode) {
+      new window.QRCode(danaQrCode, {
+        text: payment.qrContent,
+        width: 220,
+        height: 220,
+        colorDark: "#080b14",
+        colorLight: "#ffffff",
+        correctLevel: window.QRCode.CorrectLevel.M
+      });
+    } else {
+      danaPaymentMessage.textContent = "QR belum dapat ditampilkan. Silakan coba lagi.";
+      danaPaymentRetry.hidden = false;
+    }
+
+    var redirectUrl = safePaymentUrl(payment.redirectUrl);
+    if (redirectUrl) {
+      danaPaymentRedirect.href = redirectUrl;
+      danaPaymentRedirect.hidden = false;
+    }
+  }
+
+  function showDanaPaymentError(message) {
+    resetDanaPaymentPanel();
+    danaPaymentPanel.hidden = false;
+    danaPaymentMessage.textContent = message;
+    danaPaymentRetry.hidden = false;
+  }
+
+  async function requestDanaPayment() {
+    if (!activeOrderCode || !checkoutToken) throw new Error("Sesi checkout tidak tersedia.");
+    return request("/api/orders/" + activeOrderCode + "/payments/dana", {
+      method: "POST",
+      headers: { "Authorization": "Bearer " + checkoutToken }
+    });
+  }
+
+  function openModal(order, payment) {
     activeOrderCode = order.orderCode;
     document.getElementById("demo-order-id").textContent = order.orderCode;
     document.getElementById("order-queue").textContent = "#" + String(order.queueNumber).padStart(3, "0");
     document.getElementById("order-date").textContent = order.orderDate;
     setOrderStatus(order.status);
+    renderDanaPayment(payment);
     modal.hidden = false;
     document.body.style.overflow = "hidden";
     modal.querySelector(".modal-close").focus();
@@ -298,6 +410,9 @@
     modal.hidden = true;
     document.body.style.overflow = "";
     window.clearInterval(orderPollTimer);
+    activeOrderCode = "";
+    checkoutToken = "";
+    resetDanaPaymentPanel();
   }
 
   function startOrderPolling() {
@@ -305,11 +420,14 @@
     orderPollTimer = window.setInterval(async function() {
       if (!activeOrderCode) return;
       try {
-        var response = await request("/api/orders/" + activeOrderCode);
+        var response = await request("/api/orders/" + activeOrderCode, {
+          headers: checkoutToken ? { "Authorization": "Bearer " + checkoutToken } : {}
+        });
         setOrderStatus(response.order.status);
-        if (response.order.status === "PAID") {
+        if (response.payment) renderDanaPayment(response.payment);
+        if (response.order.status === "PAID" || response.order.status === "CANCELLED") {
           window.clearInterval(orderPollTimer);
-          await loadCatalog();
+          if (response.order.status === "PAID") await loadCatalog();
         }
       } catch (error) {
         console.warn(error);
@@ -401,7 +519,21 @@
     setCheckoutLoading(true);
     try {
       var response = await createOrder();
-      openModal(response.order);
+      checkoutToken = response.checkoutToken || "";
+      activeOrderCode = response.order.orderCode;
+      var danaPayment = null;
+      if (response.order.paymentMethod === "DANA") {
+        try {
+          var paymentResponse = await requestDanaPayment();
+          danaPayment = paymentResponse.payment;
+        } catch (paymentError) {
+          openModal(response.order, null);
+          showDanaPaymentError(paymentError.message);
+          showToast(paymentError.message);
+          return;
+        }
+      }
+      openModal(response.order, danaPayment);
     } catch (error) {
       showToast(error.message);
       await loadCatalog();
@@ -422,6 +554,19 @@
 
   modal.querySelector(".modal-close").addEventListener("click", closeModal);
   modal.querySelector(".modal-done").addEventListener("click", closeModal);
+  danaPaymentRetry.addEventListener("click", async function() {
+    danaPaymentRetry.disabled = true;
+    danaPaymentRetry.textContent = "Membuat QR…";
+    try {
+      var response = await requestDanaPayment();
+      renderDanaPayment(response.payment);
+    } catch (error) {
+      showDanaPaymentError(error.message);
+    } finally {
+      danaPaymentRetry.disabled = false;
+      danaPaymentRetry.textContent = "Coba buat QR lagi";
+    }
+  });
   modal.addEventListener("click", function(event) {
     if (event.target === modal) closeModal();
   });
@@ -433,5 +578,6 @@
   document.getElementById("footer-year").textContent = "© " + new Date().getFullYear();
   updateSummary();
   loadCatalog();
+  loadDanaStatus();
   loadRobloxOAuth();
 })();

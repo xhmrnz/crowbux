@@ -291,10 +291,10 @@
                   </span>
                 </label>
                 <label class="payment-option">
-                  <input type="radio" name="payment" value="DANA" data-fee="1500" />
+                  <input id="payment-dana" type="radio" name="payment" value="DANA" data-fee="1500" disabled />
                   <span class="payment-content">
                     <span class="payment-logo dana-logo">D</span>
-                    <span><strong>DANA</strong><small>Admin Rp1.500</small></span>
+                    <span><strong>DANA QRIS</strong><small id="dana-payment-note">Memeriksa layanan…</small></span>
                     <i aria-hidden="true"></i>
                   </span>
                 </label>
@@ -458,7 +458,7 @@
               <span aria-hidden="true">+</span>
             </button>
             <div class="faq-answer" hidden>
-              <p>Checkout akan membuat pesanan dan nomor antrean. Integrasi payment gateway masih diperlukan agar verifikasi pembayaran berjalan otomatis.</p>
+              <p>Pembayaran DANA QRIS akan diverifikasi otomatis setelah layanan merchant DANA diaktifkan. Metode lain tetap diproses sesuai konfirmasi admin.</p>
             </div>
           </article>
           <article class="faq-item">
@@ -502,6 +502,15 @@
             <strong id="order-queue">#000</strong>
           </div>
         </div>
+        <section class="dana-payment-panel" id="dana-payment-panel" aria-labelledby="dana-payment-title" hidden>
+          <span class="section-kicker" id="dana-payment-title">Bayar dengan DANA QRIS</span>
+          <div class="dana-qr-frame" id="dana-qr-code" role="img" aria-label="QR pembayaran DANA"></div>
+          <strong class="dana-payment-amount" id="dana-payment-amount">Rp0</strong>
+          <p id="dana-payment-message">Scan QR menggunakan DANA atau aplikasi pembayaran yang mendukung QRIS.</p>
+          <small id="dana-payment-expiry"></small>
+          <a class="secondary-button dana-payment-redirect" id="dana-payment-redirect" href="#" target="_blank" rel="noopener" hidden>Buka aplikasi DANA</a>
+          <button class="secondary-button" id="dana-payment-retry" type="button" hidden>Coba buat QR lagi</button>
+        </section>
         <div class="order-status" id="order-status" role="status" aria-live="polite">
           <i aria-hidden="true"></i>
           <div>
@@ -514,6 +523,12 @@
     </div>
 
     <div class="toast" id="toast" role="status" aria-live="polite"></div>
-    <script src="app.js"></script>
+    <script
+      defer
+      src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"
+      integrity="sha384-3zSEDfvllQohrq0PHL1fOXJuC/jSOO34H46t6UQfobFOmxE5BpjjaIJY5F2/bMnU"
+      crossorigin="anonymous"
+    ></script>
+    <script defer src="app.js"></script>
   </body>
 </html>
