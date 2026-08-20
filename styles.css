@@ -953,7 +953,7 @@ input.is-invalid {
 .package-price {
   align-self: end;
   margin-top: 18px;
-  color: var(--cyan);
+  color: var(--lime);
   font-size: 0.9rem;
   font-weight: 700;
 }
