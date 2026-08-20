@@ -896,7 +896,7 @@ input.is-invalid {
   align-content: start;
   padding: 20px;
   overflow: hidden;
-  border: 2px solid rgba(108, 137, 174, 0.32);
+  border: 2px solid rgba(185, 156, 255, 0.22);
   border-radius: 14px;
   background: linear-gradient(145deg, rgba(17, 26, 47, 0.92), rgba(8, 12, 27, 0.82));
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.025);
@@ -904,8 +904,8 @@ input.is-invalid {
 }
 
 .package-option:hover .package-content {
-  border-color: rgba(107, 230, 244, 0.62);
-  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.2), inset 0 0 24px rgba(107, 230, 244, 0.035);
+  border-color: rgba(185, 156, 255, 0.62);
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.2), inset 0 0 24px rgba(185, 156, 255, 0.045);
   transform: translateY(-3px);
 }
 
@@ -916,9 +916,9 @@ input.is-invalid {
 }
 
 .package-option input:checked + .package-content {
-  border-color: var(--cyan);
-  background: linear-gradient(145deg, rgba(18, 38, 61, 0.96), rgba(13, 17, 34, 0.9));
-  box-shadow: 0 0 0 1px rgba(107, 230, 244, 0.16), 0 14px 34px rgba(0, 0, 0, 0.24);
+  border-color: var(--lime);
+  background: linear-gradient(145deg, rgba(185, 156, 255, 0.11), rgba(13, 17, 34, 0.9));
+  box-shadow: 0 0 0 1px rgba(185, 156, 255, 0.16), 0 14px 34px rgba(0, 0, 0, 0.24);
 }
 
 .package-option.is-unavailable {
