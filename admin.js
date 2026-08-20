@@ -13,7 +13,7 @@
   var toast = document.getElementById("toast");
   var toastTimer;
   var adminSecret = sessionStorage.getItem("crowbux-admin-secret") || "";
-  var packageAmounts = [80, 400, 800, 1700, 4500, 10000];
+  var packageAmounts = [100, 200, 300, 500, 1000, 2000, 3000, 5000, 10000];
 
   function apiUrl(path) {
     return apiBaseUrl.replace(/\/$/, "") + path;

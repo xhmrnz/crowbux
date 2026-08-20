@@ -870,7 +870,7 @@ input.is-invalid {
 .package-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 10px;
+  gap: 14px;
 }
 
 .package-option,
@@ -890,21 +890,23 @@ input.is-invalid {
 
 .package-content {
   position: relative;
-  display: flex;
-  min-height: 112px;
-  flex-direction: column;
-  justify-content: space-between;
-  padding: 18px;
+  display: grid;
+  min-height: 136px;
+  grid-template-rows: auto auto 1fr;
+  align-content: start;
+  padding: 20px;
   overflow: hidden;
-  border: 1px solid var(--line);
-  border-radius: 15px;
-  background: rgba(3, 7, 18, 0.36);
-  transition: border-color 0.2s ease, background 0.2s ease, transform 0.2s ease;
+  border: 2px solid rgba(108, 137, 174, 0.32);
+  border-radius: 14px;
+  background: linear-gradient(145deg, rgba(17, 26, 47, 0.92), rgba(8, 12, 27, 0.82));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.025);
+  transition: border-color 0.2s ease, background 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
 }
 
 .package-option:hover .package-content {
-  border-color: rgba(255, 255, 255, 0.22);
-  transform: translateY(-2px);
+  border-color: rgba(107, 230, 244, 0.62);
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.2), inset 0 0 24px rgba(107, 230, 244, 0.035);
+  transform: translateY(-3px);
 }
 
 .package-option input:focus-visible + .package-content,
@@ -913,10 +915,10 @@ input.is-invalid {
   outline-offset: 3px;
 }
 
-.package-option input:checked + .package-content,
-.package-popular input:checked ~ .package-content {
-  border-color: var(--lime);
-  background: rgba(185, 156, 255, 0.08);
+.package-option input:checked + .package-content {
+  border-color: var(--cyan);
+  background: linear-gradient(145deg, rgba(18, 38, 61, 0.96), rgba(13, 17, 34, 0.9));
+  box-shadow: 0 0 0 1px rgba(107, 230, 244, 0.16), 0 14px 34px rgba(0, 0, 0, 0.24);
 }
 
 .package-option.is-unavailable {
@@ -934,45 +936,26 @@ input.is-invalid {
 }
 
 .package-amount {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  font-family: "Unbounded", sans-serif;
-  font-size: 0.98rem;
+  color: #ffffff;
+  font-family: "DM Sans", Arial, sans-serif;
+  font-size: 1.45rem;
+  font-weight: 700;
+  line-height: 1;
 }
 
-.package-amount i {
-  display: grid;
-  width: 23px;
-  height: 23px;
-  place-items: center;
-  border-radius: 7px;
-  background: var(--lime);
-  color: #142009;
-  font-family: "DM Sans", sans-serif;
+.package-unit {
+  margin-top: 7px;
+  color: #9ebfe8;
   font-size: 0.72rem;
-  font-style: normal;
-  font-weight: 800;
-  transform: rotate(-7deg);
+  font-weight: 500;
 }
 
 .package-price {
-  color: var(--muted);
-  font-size: 0.72rem;
-}
-
-.popular-badge {
-  position: absolute;
-  top: -8px;
-  right: 12px;
-  z-index: 2;
-  padding: 4px 7px;
-  border-radius: 999px;
-  background: var(--violet);
-  color: white;
-  font-size: 0.55rem;
+  align-self: end;
+  margin-top: 18px;
+  color: var(--cyan);
+  font-size: 0.9rem;
   font-weight: 700;
-  text-transform: uppercase;
 }
 
 .payment-grid {
@@ -2165,8 +2148,8 @@ input.is-invalid {
   }
 
   .package-content {
-    min-height: 102px;
-    padding: 14px;
+    min-height: 126px;
+    padding: 16px;
   }
 
   .success-modal {
